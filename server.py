@@ -42,7 +42,8 @@ def validate_token(token):
         token_payload = jwt.decode(
             token=token,
             key=public_key,
-            audience="https://devapi.com/api/users",
+            audience=env.get("AUTH0_AUDIENCE"),  
+            issuer=f'https://{env.get("AUTH0_DOMAIN")}/',
             algorithms="RS256"
         )
         return token_payload
@@ -81,7 +82,7 @@ oauth.register(
 
 # Controllers API
 @app.route("/")
-def home():
+def index():
     return render_template(
         "index.html",
         session=session.get("user"),
