@@ -15,6 +15,7 @@ from flask import Flask, jsonify, logging, redirect, render_template, session, u
 from functools import wraps
 from flask_cors import cross_origin
 from six.moves import http_client
+import logging
 
 import requests
 from flask import request
@@ -268,7 +269,7 @@ def auth_info_firebase():
 
 @app.errorhandler(http_client.INTERNAL_SERVER_ERROR)
 def unexpected_error(e):
-    logging.exception("An error occurred while processing the request.")
+    logging.getLogger().error("An error occurred while processing the request.", exc_info=True)
     response = jsonify(
         {"code": http_client.INTERNAL_SERVER_ERROR, "message": f"Exception: {e}"}
     )
