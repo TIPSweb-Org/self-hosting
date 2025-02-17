@@ -1,4 +1,5 @@
 
+import base64
 import json
 import os
 from os import environ as env
@@ -10,8 +11,10 @@ from authlib.integrations.flask_client import OAuth
 import requests
 from requests_oauthlib import OAuth2Session
 from dotenv import find_dotenv, load_dotenv
-from flask import Flask, jsonify, redirect, render_template, session, url_for
+from flask import Flask, jsonify, logging, redirect, render_template, session, url_for
 from functools import wraps
+from flask_cors import cross_origin
+from six.moves import http_client
 
 import requests
 from flask import request
@@ -230,6 +233,48 @@ def create_user():
             "status": "error",
             "message": response_data.get('message', 'Unknown error occurred')
         }), 400
+    
+
+# Google Cloud Endpoints Authentication Information Retrieval
+def _base64_decode(encoded_str):
+    if encoded_str[0] == "b":
+        encoded_str = encoded_str[1:]
+    num_missed_paddings = 4 - len(encoded_str) % 4
+    if num_missed_paddings != 4:
+        encoded_str += "=" * num_missed_paddings
+    return base64.b64decode(encoded_str).decode("utf-8")
+
+def auth_info():
+    encoded_info = request.headers.get("X-Endpoint-API-UserInfo", None)
+    if encoded_info:
+        info_json = _base64_decode(encoded_info)
+        user_info = json.loads(info_json)
+    else:
+        user_info = {"id": "anonymous"}
+    return jsonify(user_info)
+
+@app.route("/auth/info/googlejwt", methods=["GET"])
+def auth_info_google_jwt():
+    return auth_info()
+
+@app.route("/auth/info/googleidtoken", methods=["GET"])
+def auth_info_google_id_token():
+    return auth_info()
+
+@app.route("/auth/info/firebase", methods=["GET"])
+@cross_origin(send_wildcard=True)
+def auth_info_firebase():
+    return auth_info()
+
+@app.errorhandler(http_client.INTERNAL_SERVER_ERROR)
+def unexpected_error(e):
+    logging.exception("An error occurred while processing the request.")
+    response = jsonify(
+        {"code": http_client.INTERNAL_SERVER_ERROR, "message": f"Exception: {e}"}
+    )
+    response.status_code = http_client.INTERNAL_SERVER_ERROR
+    return response
+
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 3000))
