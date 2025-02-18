@@ -146,25 +146,63 @@ def index():
 
 @app.route("/callback", methods=["GET", "POST"])
 def callback():
-    token = oauth.auth0.authorize_access_token()
-    #print("Access Token:", token['access_token'])
+    # token = oauth.auth0.authorize_access_token()
+    # #print("Access Token:", token['access_token'])
 
-    token_payload = validate_token(token['access_token'])
-    #print("Decoded token payload:", json.dumps(token_payload, indent=2))
+    # token_payload = validate_token(token['access_token'])
+    # #print("Decoded token payload:", json.dumps(token_payload, indent=2))
     
-    session["user"] = {
-        "token": token,
-        "permissions": token_payload.get("permissions", []) if token_payload else []
-    }
-    return redirect("/")
+    # session["user"] = {
+    #     "token": token,
+    #     "permissions": token_payload.get("permissions", []) if token_payload else []
+    # }
+    # return redirect("/")
+    try:
+        # Determine which OAuth provider to use based on the state
+        provider = session.get('oauth_provider', 'auth0')
+        oauth_client = oauth.google if provider == 'google' else oauth.auth0
+        
+        logging.info(f"Using OAuth provider: {provider}")
+        token = oauth_client.authorize_access_token()
+        
+        if provider == 'google':
+            user = oauth_client.parse_id_token(token)
+        else:
+            token_payload = validate_token(token['access_token'])
+            user = token_payload
+            
+        session["user"] = user
+        return redirect("/")
+        
+    except Exception as e:
+        logging.error(f"Callback error details: {str(e)}")
+        return f"Authentication failed: {str(e)}", 401
 
-@app.route("/login")
-def login():
+# @app.route("/login")
+# def login():
+#     return oauth.auth0.authorize_redirect(
+#         redirect_uri=url_for("callback", _external=True),
+#         audience=env.get("AUTH0_AUDIENCE"),
+#         response_type="code",
+#         scope="offline_access openid profile email"
+#     )
+
+@app.route("/login/auth0")
+def login_auth0():
+    session['oauth_provider'] = 'auth0'
     return oauth.auth0.authorize_redirect(
         redirect_uri=url_for("callback", _external=True),
         audience=env.get("AUTH0_AUDIENCE"),
         response_type="code",
         scope="offline_access openid profile email"
+    )
+
+@app.route("/login/google")
+def login_google():
+    session['oauth_provider'] = 'google'
+    return oauth.google.authorize_redirect(
+        redirect_uri=url_for("callback", _external=True),
+        scope="openid email profile"
     )
 
 @app.route("/logout")
