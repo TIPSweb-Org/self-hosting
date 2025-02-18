@@ -31,16 +31,27 @@ if ENV_FILE:
     load_dotenv(ENV_FILE)
 
 
-jwks_endpoint = env.get("JWKS_ENDPOINT")
-jwks = requests.get(jwks_endpoint).json()["keys"]
+auth0_jwks_endpoint = env.get("JWKS_ENDPOINT")
+auth0_jwks = requests.get(auth0_jwks_endpoint).json()["keys"]
+
+# Google JWKS endpoint
+google_jwks_endpoint = "https://www.googleapis.com/oauth2/v3/certs"
+google_jwks = requests.get(google_jwks_endpoint).json()["keys"]
 
 
-def find_public_key(kid):
-    for key in jwks:
+# def find_public_key(kid):
+#     for key in jwks:
+#         if key.get("kid") == kid:
+#             print(f"Found public key for kid: {kid}")
+#             return key
+#     print(f"No public key found for kid: {kid}")
+#     return None
+
+def find_public_key(kid, provider="auth0"):
+    keys = auth0_jwks if provider == "auth0" else google_jwks
+    for key in keys:
         if key.get("kid") == kid:
-            print(f"Found public key for kid: {kid}")
             return key
-    print(f"No public key found for kid: {kid}")
     return None
 
 def validate_token(token):
@@ -61,35 +72,25 @@ def validate_token(token):
     try:
         header = jws.get_unverified_header(token)
         kid = header.get("kid")
-        print(f"Token header: {header}")
         public_key = find_public_key(kid)
+        
         if not public_key:
-            print(f"Public key not found for kid: {kid}")
             return None
-        print(f"Public key found: {public_key}")
+            
         token_payload = jwt.decode(
             token=token,
             key=public_key,
-            audience=env.get("AUTH0_AUDIENCE"),  
-            issuer=f'https://{env.get("AUTH0_DOMAIN")}/',
-            algorithms="RS256"
+            audience=env.get("GOOGLE_CLIENT_ID"),  # Change audience to Google Client ID
+            issuer="https://accounts.google.com",  # Update issuer for Google
+            algorithms=["RS256"]
         )
-        print(f"Token payload: {token_payload}")
         return token_payload
+        
     except ExpiredSignatureError:
-        print("Token has expired")
+        print("Token expired")
         return None
-    except JWTClaimsError as e:
-        print(f"Invalid claims: {str(e)}")
-        return None
-    except JWSError as e:
-        print(f"Invalid signature: {str(e)}")
-        return None
-    except JWTError as e:
-        print(f"JWT error: {str(e)}")
-        return None
-    except Exception as e:
-        print(f"Unexpected error: {str(e)}")
+    except (JWTError, JWSError, JWTClaimsError) as e:
+        print(f"Token validation error: {str(e)}")
         return None
          
 def requires_admin(f):
@@ -189,15 +190,16 @@ def logout():
             quote_via=quote_plus,
         )
     )
-@app.route("/auth")
-def auth() -> Union[Tuple[str, int], werkzeug.Response]:
-    # Check these two values
-    print(flask.request.args.get('state'), flask.session.get('_google_authlib_state_'))
 
+@app.route("/auth")
+def auth():
     token = oauth.google.authorize_access_token()
-    user = oauth.google.parse_id_token(token)
-    flask.session["user"] = user
-    return flask.redirect("/")
+    validated_token = validate_token(token['id_token'])
+    if validated_token:
+        session['user'] = validated_token
+        return redirect(url_for('index'))
+    return "Token validation failed", 401
+
 
 @app.route('/admin')
 @requires_admin
