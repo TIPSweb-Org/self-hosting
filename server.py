@@ -122,7 +122,9 @@ def callback():
         return redirect("/")
     except Exception as e:
         print(f"Callback error details: {str(e)}")
-        return f"Authentication error: {str(e)}", 500
+        if hasattr(e, 'response') and e.response is not None:
+            print(f"Auth0 response error: {e.response.json()}")
+            return f"Authentication error: {str(e)}", 500
 
 
 @app.route("/login")
