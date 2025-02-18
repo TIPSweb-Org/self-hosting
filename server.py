@@ -187,23 +187,23 @@ def callback():
 #         scope="offline_access openid profile email"
 #     )
 
-@app.route("/login/auth0")
-def login_auth0():
-    session['oauth_provider'] = 'auth0'
-    return oauth.auth0.authorize_redirect(
-        redirect_uri=url_for("callback", _external=True),
-        audience=env.get("AUTH0_AUDIENCE"),
-        response_type="code",
-        scope="offline_access openid profile email"
-    )
-
-@app.route("/login/google")
-def login_google():
-    session['oauth_provider'] = 'google'
-    return oauth.google.authorize_redirect(
-        redirect_uri=url_for("callback", _external=True),
-        scope="openid email profile"
-    )
+@app.route("/login")
+def login():
+    provider = request.args.get('provider', 'auth0')  # Default to auth0 if no provider specified
+    session['oauth_provider'] = provider
+    
+    if provider == 'google':
+        return oauth.google.authorize_redirect(
+            redirect_uri=url_for("callback", _external=True),
+            scope="openid email profile"
+        )
+    else:
+        return oauth.auth0.authorize_redirect(
+            redirect_uri=url_for("callback", _external=True),
+            audience=env.get("AUTH0_AUDIENCE"),
+            response_type="code",
+            scope="offline_access openid profile email"
+        )
 
 @app.route("/logout")
 def logout():
