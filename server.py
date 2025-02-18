@@ -3,11 +3,12 @@ import base64
 import json
 import os
 from os import environ as env
-from typing import Annotated
+from typing import Annotated, Tuple, Union
 from urllib.parse import quote_plus, urlencode
 from urllib.request import urlopen
 
 from authlib.integrations.flask_client import OAuth
+import flask
 import requests
 from requests_oauthlib import OAuth2Session
 from dotenv import find_dotenv, load_dotenv
@@ -22,6 +23,7 @@ from flask import request
 
 from jose import ExpiredSignatureError, JWSError, JWTError, jws, jwt
 from jose.exceptions import JWTClaimsError
+import werkzeug
 
 ## protecting information from .env file
 ENV_FILE = find_dotenv()
@@ -187,6 +189,15 @@ def logout():
             quote_via=quote_plus,
         )
     )
+@app.route("/auth")
+def auth() -> Union[Tuple[str, int], werkzeug.Response]:
+    # Check these two values
+    print(flask.request.args.get('state'), flask.session.get('_google_authlib_state_'))
+
+    token = oauth.google.authorize_access_token()
+    user = oauth.google.parse_id_token(token)
+    flask.session["user"] = user
+    return flask.redirect("/")
 
 @app.route('/admin')
 @requires_admin
@@ -220,10 +231,6 @@ def admin_dashboard():
     
     return render_template('admin-dash.html', users=users_response)
 
-@app.route('/health')
-def health_check():
-    response = requests.get(f'https://{env.get("AUTH0_DOMAIN")}/.well-known/openid-configuration')
-    return {"status": "healthy", "auth0_reachable": response.status_code == 200}
 
 @app.route('/admin/delete-user/<user_id>', methods=['DELETE'])
 @requires_admin
