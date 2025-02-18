@@ -36,13 +36,35 @@ jwks = requests.get(jwks_endpoint).json()["keys"]
 def find_public_key(kid):
     for key in jwks:
         if key.get("kid") == kid:
+            print(f"Found public key for kid: {kid}")
             return key
+    print(f"No public key found for kid: {kid}")
+    return None
 
 def validate_token(token):
+    # try:
+    #     header = jws.get_unverified_header(token)
+    #     kid = header.get("kid")
+    #     public_key = find_public_key(kid)
+    #     token_payload = jwt.decode(
+    #         token=token,
+    #         key=public_key,
+    #         audience=env.get("AUTH0_AUDIENCE"),  
+    #         issuer=f'https://{env.get("AUTH0_DOMAIN")}/',
+    #         algorithms="RS256"
+    #     )
+    #     return token_payload
+    # except (ExpiredSignatureError, JWTError, JWSError, JWTClaimsError) as error:
+    #      return None
     try:
         header = jws.get_unverified_header(token)
         kid = header.get("kid")
+        print(f"Token header: {header}")
         public_key = find_public_key(kid)
+        if not public_key:
+            print(f"Public key not found for kid: {kid}")
+            return None
+        print(f"Public key found: {public_key}")
         token_payload = jwt.decode(
             token=token,
             key=public_key,
@@ -50,9 +72,23 @@ def validate_token(token):
             issuer=f'https://{env.get("AUTH0_DOMAIN")}/',
             algorithms="RS256"
         )
+        print(f"Token payload: {token_payload}")
         return token_payload
-    except (ExpiredSignatureError, JWTError, JWSError, JWTClaimsError) as error:
-         return None
+    except ExpiredSignatureError:
+        print("Token has expired")
+        return None
+    except JWTClaimsError as e:
+        print(f"Invalid claims: {str(e)}")
+        return None
+    except JWSError as e:
+        print(f"Invalid signature: {str(e)}")
+        return None
+    except JWTError as e:
+        print(f"JWT error: {str(e)}")
+        return None
+    except Exception as e:
+        print(f"Unexpected error: {str(e)}")
+        return None
          
 def requires_admin(f):
     @wraps(f)
