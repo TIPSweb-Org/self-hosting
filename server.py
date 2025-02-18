@@ -126,6 +126,10 @@ oauth.register(
 # Controllers API
 @app.route("/")
 def index():
+    ##TODO: needed?
+    if not session.get("user"):
+        return redirect(url_for("login"))
+    ##
     return render_template(
         "index.html",
         session=session.get("user"),
@@ -172,6 +176,10 @@ def callback():
 
 @app.route("/login")
 def login():
+    ##TODO: needed?
+    if session.get("user"):
+        return redirect(url_for("index"))
+    ##
     return oauth.auth0.authorize_redirect(
         redirect_uri=url_for("callback", _external=True),
         audience=env.get("AUTH0_AUDIENCE"),
