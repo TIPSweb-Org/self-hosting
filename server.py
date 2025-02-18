@@ -220,6 +220,10 @@ def admin_dashboard():
     
     return render_template('admin-dash.html', users=users_response)
 
+@app.route('/health')
+def health_check():
+    response = requests.get(f'https://{env.get("AUTH0_DOMAIN")}/.well-known/openid-configuration')
+    return {"status": "healthy", "auth0_reachable": response.status_code == 200}
 
 @app.route('/admin/delete-user/<user_id>', methods=['DELETE'])
 @requires_admin
