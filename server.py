@@ -126,10 +126,6 @@ oauth.register(
 # Controllers API
 @app.route("/")
 def index():
-    ##TODO: needed?
-    if not session.get("user"):
-        return redirect(url_for("login"))
-    ##
     return render_template(
         "index.html",
         session=session.get("user"),
@@ -139,47 +135,20 @@ def index():
 
 @app.route("/callback", methods=["GET", "POST"])
 def callback():
-    # token = oauth.auth0.authorize_access_token()
-    # #print("Access Token:", token['access_token'])
+    token = oauth.auth0.authorize_access_token()
+    #print("Access Token:", token['access_token'])
 
-    # token_payload = validate_token(token['access_token'])
-    # #print("Decoded token payload:", json.dumps(token_payload, indent=2))
+    token_payload = validate_token(token['access_token'])
+    #print("Decoded token payload:", json.dumps(token_payload, indent=2))
     
-    # session["user"] = {
-    #     "token": token,
-    #     "permissions": token_payload.get("permissions", []) if token_payload else []
-    # }
-    # return redirect("/")
-    try:
-        logging.info("Starting callback processing")
-        logging.info(f"Request args: {request.args}")
-        
-        token = oauth.auth0.authorize_access_token()
-        logging.info(f"Access token obtained: {token}")
-        
-        token_payload = validate_token(token['access_token'])
-        logging.info(f"Token validation result: {token_payload}")
-        
-        if not token_payload:
-            raise Exception("Token validation failed")
-            
-        session["user"] = {
-            "token": token,
-            "permissions": token_payload.get("permissions", [])
-        }
-        return redirect("/")
-        
-    except Exception as e:
-        logging.error(f"Callback error: {str(e)}")
-        logging.error(f"Current session state: {session.get('_auth0_authlib_state_')}")
-        return redirect(url_for("login"))
+    session["user"] = {
+        "token": token,
+        "permissions": token_payload.get("permissions", []) if token_payload else []
+    }
+    return redirect("/")
 
 @app.route("/login")
 def login():
-    ##TODO: needed?
-    if session.get("user"):
-        return redirect(url_for("index"))
-    ##
     return oauth.auth0.authorize_redirect(
         redirect_uri=url_for("callback", _external=True),
         audience=env.get("AUTH0_AUDIENCE"),
