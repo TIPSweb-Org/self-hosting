@@ -147,24 +147,28 @@ def callback():
     # }
     # return redirect("/")
     try:
-        print("Starting callback processing")
+        logging.info("Starting callback processing")
+        logging.info(f"Request args: {request.args}")
+        
         token = oauth.auth0.authorize_access_token()
-        print(f"Token received: {token}")
+        logging.info(f"Access token obtained: {token}")
         
         token_payload = validate_token(token['access_token'])
-        print(f"Token payload: {token_payload}")
+        logging.info(f"Token validation result: {token_payload}")
         
+        if not token_payload:
+            raise Exception("Token validation failed")
+            
         session["user"] = {
             "token": token,
-            "permissions": token_payload.get("permissions", []) if token_payload else []
+            "permissions": token_payload.get("permissions", [])
         }
         return redirect("/")
+        
     except Exception as e:
-        print(f"Callback error details: {str(e)}")
-        if hasattr(e, 'response') and e.response is not None:
-            print(f"Auth0 response error: {e.response.json()}")
-        return f"Authentication error: {str(e)}", 500
-
+        logging.error(f"Callback error: {str(e)}")
+        logging.error(f"Current session state: {session.get('_auth0_authlib_state_')}")
+        return redirect(url_for("login"))
 
 @app.route("/login")
 def login():
