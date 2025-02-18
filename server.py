@@ -112,6 +112,7 @@ app.secret_key = env.get("APP_SECRET_KEY")
 
 oauth = OAuth(app)
 
+#oauth registration
 oauth.register(
     "auth0",
     client_id=env.get("AUTH0_CLIENT_ID"),
@@ -122,6 +123,16 @@ oauth.register(
     server_metadata_url=f'https://{env.get("AUTH0_DOMAIN")}/.well-known/openid-configuration',
 )
 
+# Google registration
+oauth.register(
+    "google",
+    client_id=env.get("GOOGLE_CLIENT_ID"),
+    client_secret=env.get("GOOGLE_CLIENT_SECRET"),
+    server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
+    client_kwargs={
+        "scope": "openid email profile"
+    }
+)
 
 # Controllers API
 @app.route("/")
