@@ -108,16 +108,21 @@ def callback():
     # }
     # return redirect("/")
     try:
+        print("Starting callback processing")
         token = oauth.auth0.authorize_access_token()
+        print(f"Token received: {token}")
+        
         token_payload = validate_token(token['access_token'])
+        print(f"Token payload: {token_payload}")
+        
         session["user"] = {
             "token": token,
             "permissions": token_payload.get("permissions", []) if token_payload else []
         }
         return redirect("/")
     except Exception as e:
-        print(f"Callback error: {str(e)}")
-        raise
+        print(f"Callback error details: {str(e)}")
+        return f"Authentication error: {str(e)}", 500
 
 
 @app.route("/login")
