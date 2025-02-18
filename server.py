@@ -96,17 +96,28 @@ def index():
 
 @app.route("/callback", methods=["GET", "POST"])
 def callback():
-    token = oauth.auth0.authorize_access_token()
-    #print("Access Token:", token['access_token'])
+    # token = oauth.auth0.authorize_access_token()
+    # #print("Access Token:", token['access_token'])
 
-    token_payload = validate_token(token['access_token'])
-    #print("Decoded token payload:", json.dumps(token_payload, indent=2))
+    # token_payload = validate_token(token['access_token'])
+    # #print("Decoded token payload:", json.dumps(token_payload, indent=2))
     
-    session["user"] = {
-        "token": token,
-        "permissions": token_payload.get("permissions", []) if token_payload else []
-    }
-    return redirect("/")
+    # session["user"] = {
+    #     "token": token,
+    #     "permissions": token_payload.get("permissions", []) if token_payload else []
+    # }
+    # return redirect("/")
+    try:
+        token = oauth.auth0.authorize_access_token()
+        token_payload = validate_token(token['access_token'])
+        session["user"] = {
+            "token": token,
+            "permissions": token_payload.get("permissions", []) if token_payload else []
+        }
+        return redirect("/")
+    except Exception as e:
+        print(f"Callback error: {str(e)}")
+        raise
 
 
 @app.route("/login")
