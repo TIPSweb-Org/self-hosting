@@ -157,26 +157,44 @@ def callback():
     #     "permissions": token_payload.get("permissions", []) if token_payload else []
     # }
     # return redirect("/")
+    logging.info(f"Callback received with args: {request.args}")
+    logging.info(f"Session state: {session}")
+    logging.info(f"Current provider: {session.get('oauth_provider')}")
+    
+    provider = session.get('oauth_provider', 'auth0')
+    oauth_client = oauth.google if provider == 'google' else oauth.auth0
+    
     try:
-        # Determine which OAuth provider to use based on the state
-        provider = session.get('oauth_provider', 'auth0')
-        oauth_client = oauth.google if provider == 'google' else oauth.auth0
-        
-        logging.info(f"Using OAuth provider: {provider}")
         token = oauth_client.authorize_access_token()
-        
-        if provider == 'google':
-            user = oauth_client.parse_id_token(token)
-        else:
-            token_payload = validate_token(token['access_token'])
-            user = token_payload
-            
-        session["user"] = user
         return redirect("/")
-        
     except Exception as e:
-        logging.error(f"Callback error details: {str(e)}")
-        return f"Authentication failed: {str(e)}", 401
+        logging.error(f"Token error: {str(e)}")
+        # Print all environment variables for debugging
+        logging.info(f"AUTH0_CLIENT_ID: {env.get('AUTH0_CLIENT_ID')}")
+        logging.info(f"AUTH0_DOMAIN: {env.get('AUTH0_DOMAIN')}")
+        logging.info(f"Redirect URI: {url_for('callback', _external=True)}")
+        return str(e), 401
+    # try:
+    #     # Determine which OAuth provider to use based on the state
+    #     provider = session.get('oauth_provider', 'auth0')
+    #     oauth_client = oauth.google if provider == 'google' else oauth.auth0
+        
+    #     logging.info(f"Using OAuth provider: {provider}")
+    #     token = oauth_client.authorize_access_token()
+        
+    #     if provider == 'google':
+    #         user = oauth_client.parse_id_token(token)
+    #     else:
+    #         token_payload = validate_token(token['access_token'])
+    #         user = token_payload
+            
+    #     session["user"] = user
+    #     return redirect("/")
+        
+    # except Exception as e:
+    #     logging.error(f"Callback error details: {str(e)}")
+    #     return f"Authentication failed: {str(e)}", 401
+    
 
 # @app.route("/login")
 # def login():
