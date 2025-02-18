@@ -124,7 +124,7 @@ def callback():
         print(f"Callback error details: {str(e)}")
         if hasattr(e, 'response') and e.response is not None:
             print(f"Auth0 response error: {e.response.json()}")
-            return f"Authentication error: {str(e)}", 500
+        return f"Authentication error: {str(e)}", 500
 
 
 @app.route("/login")
