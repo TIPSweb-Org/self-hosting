@@ -187,6 +187,7 @@ def callback():
         return redirect("/")
     except requests.exceptions.HTTPError as http_err:
         logging.error(f"HTTP error: {http_err}")
+        return str(http_err), 401
     except Exception as e:
         logging.error(f"Token exchange failed: {str(e)}")
         logging.error(f"Full error details: {repr(e)}")
