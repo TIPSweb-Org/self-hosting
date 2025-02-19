@@ -105,6 +105,7 @@ oauth.register(
     client_secret=env.get("AUTH0_CLIENT_SECRET"),
     client_kwargs={
         "scope": "offline_access openid profile email",
+        "audience": env.get("AUTH0_AUDIENCE") 
     },
     server_metadata_url=f'https://{env.get("AUTH0_DOMAIN")}/.well-known/openid-configuration',
     token_endpoint=f'https://{env.get("AUTH0_DOMAIN")}/oauth/token',
@@ -146,31 +147,36 @@ def callback():
     #     "permissions": token_payload.get("permissions", []) if token_payload else []
     # }
     # return redirect("/")
+    session.pop('login_in_progress', None)
     
-    try:
-        logging.info(f"Callback URL: {url_for('callback', _external=True)}")
+    provider = session.get('oauth_provider', 'auth0')
+    oauth_client = oauth.google if provider == 'google' else oauth.auth0
+    token = oauth_client.authorize_access_token()
+    return redirect("/")
+    # try:
+    #     logging.info(f"Callback URL: {url_for('callback', _external=True)}")
     
-        expected_state = session.get('oauth_state')
-        received_state = request.args.get('state')
+    #     expected_state = session.get('oauth_state')
+    #     received_state = request.args.get('state')
         
-        if expected_state != received_state:
-            logging.error(f"State mismatch. Expected: {expected_state}, Received: {received_state}")
+    #     if expected_state != received_state:
+    #         logging.error(f"State mismatch. Expected: {expected_state}, Received: {received_state}")
             
-        # Determine which OAuth provider to use based on the state
-        provider = session.get('oauth_provider', 'auth0')
-        oauth_client = oauth.google if provider == 'google' else oauth.auth0
+    #     # Determine which OAuth provider to use based on the state
+    #     provider = session.get('oauth_provider', 'auth0')
+    #     oauth_client = oauth.google if provider == 'google' else oauth.auth0
     
-        token = oauth_client.authorize_access_token()
-        userinfo = oauth_client.userinfo()
-        session["user"] = {
-            "token": token,
-            "userinfo": userinfo
-        }
-        return redirect("/")
+    #     token = oauth_client.authorize_access_token()
+    #     userinfo = oauth_client.userinfo()
+    #     session["user"] = {
+    #         "token": token,
+    #         "userinfo": userinfo
+    #     }
+    #     return redirect("/")
         
-    except Exception as e:
-        logging.error(f"Callback error details: {str(e)}")
-        return f"Authentication failed: {str(e)}", 401
+    # except Exception as e:
+    #     logging.error(f"Callback error details: {str(e)}")
+    #     return f"Authentication failed: {str(e)}", 401
     
 
 # @app.route("/login")
@@ -184,21 +190,35 @@ def callback():
 
 @app.route("/login")
 def login():
-    provider = request.args.get('provider', 'auth0')  # Default to auth0 if no provider specified
-    session['oauth_provider'] = provider
+    # provider = request.args.get('provider', 'auth0')  # Default to auth0 if no provider specified
+    # session['oauth_provider'] = provider
 
-    if provider == 'google':
-        return oauth.google.authorize_redirect(
-            redirect_uri=url_for("callback", _external=True),
-            scope="openid email profile"
-        )
-    else:
-        return oauth.auth0.authorize_redirect(
-            redirect_uri=url_for("callback", _external=True),
-            audience=env.get("AUTH0_AUDIENCE"),
-            response_type="code",
-            scope="offline_access openid profile email"
-        )
+    # if provider == 'google':
+    #     return oauth.google.authorize_redirect(
+    #         redirect_uri=url_for("callback", _external=True),
+    #         scope="openid email profile"
+    #     )
+    # else:
+    #     return oauth.auth0.authorize_redirect(
+    #         redirect_uri=url_for("callback", _external=True),
+    #         audience=env.get("AUTH0_AUDIENCE"),
+    #         response_type="code",
+    #         scope="offline_access openid profile email"
+    #     )
+    if session.get('login_in_progress'):
+        return redirect(url_for("index"))
+        
+    session['login_in_progress'] = True
+    
+    provider = request.args.get('provider', 'auth0')
+    session['oauth_provider'] = provider
+    
+    return oauth.auth0.authorize_redirect(
+        redirect_uri=url_for("callback", _external=True),
+        audience=env.get("AUTH0_AUDIENCE"),
+        response_type="code",
+        scope="offline_access openid profile email"
+    )
 
 @app.route("/logout")
 def logout():
