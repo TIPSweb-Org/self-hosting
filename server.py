@@ -154,6 +154,8 @@ def callback():
     logging.info(f"Request args: {request.args}")
     logging.info(f"Auth0 domain: {env.get('AUTH0_DOMAIN')}")
     logging.info(f"Auth0 client ID: {env.get('AUTH0_CLIENT_ID')}")
+    logging.info(f"Callback URL: {url_for('callback', _external=True)}")
+    logging.info(f"Audience: {env.get('AUTH0_AUDIENCE')}")
     
     provider = session.get('oauth_provider', 'auth0')
     oauth_client = oauth.google if provider == 'google' else oauth.auth0
