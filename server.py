@@ -69,6 +69,7 @@ def validate_token(token):
         return token_payload
     except (ExpiredSignatureError, JWTError, JWSError, JWTClaimsError) as error:
          return None
+    
          
 def requires_admin(f):
     @wraps(f)
@@ -174,9 +175,6 @@ def callback():
 def login():
     provider = request.args.get('provider', 'auth0')  # Default to auth0 if no provider specified
     session['oauth_provider'] = provider
-    
-    state = oauth.auth0.create_authorization_url()[1]
-    session['oauth_state'] = state
 
     if provider == 'google':
         return oauth.google.authorize_redirect(
@@ -188,8 +186,7 @@ def login():
             redirect_uri=url_for("callback", _external=True),
             audience=env.get("AUTH0_AUDIENCE"),
             response_type="code",
-            scope="offline_access openid profile email",
-            state=state
+            scope="offline_access openid profile email"
         )
 
 @app.route("/logout")
