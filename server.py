@@ -150,34 +150,34 @@ def callback():
     
 
     try:
-        # Exchange authorization code for access token
-        payload = {
-            "grant_type": "authorization_code",
-            "code": request.args.get("code"),
-            "redirect_uri": url_for("callback", _external=True),
-            "client_id": env.get("AUTH0_CLIENT_ID"),
-            "client_secret": env.get("AUTH0_CLIENT_SECRET")
-        }
+        # # Exchange authorization code for access token
+        # payload = {
+        #     "grant_type": "authorization_code",
+        #     "code": request.args.get("code"),
+        #     "redirect_uri": url_for("callback", _external=True),
+        #     "client_id": env.get("AUTH0_CLIENT_ID"),
+        #     "client_secret": env.get("AUTH0_CLIENT_SECRET")
+        # }
         
-        token_response = requests.post(
-            f"https://{env.get('AUTH0_DOMAIN')}/oauth/token",
-            headers={"Content-Type": "application/x-www-form-urlencoded"},
-            data=payload
-        )
+        # token_response = requests.post(
+        #     f"https://{env.get('AUTH0_DOMAIN')}/oauth/token",
+        #     headers={"Content-Type": "application/x-www-form-urlencoded"},
+        #     data=payload
+        # )
         
-        token_response.raise_for_status()  # Raise an exception for bad status codes
+        # token_response.raise_for_status()  # Raise an exception for bad status codes
         
-        token = token_response.json()
+        # token = token_response.json()
         
-        # Validate access token
-        token_payload = validate_token(token["access_token"])
-        logging.info(f"Decoded token payload: {json.dumps(token_payload, indent=2)}")
-        
-        # token = oauth.auth0.authorize_access_token()
-        # logging.info(f"Auth0 API Response: {token['access_token']}")
-
-        # token_payload = validate_token(token['access_token'])
+        # # Validate access token
+        # token_payload = validate_token(token["access_token"])
         # logging.info(f"Decoded token payload: {json.dumps(token_payload, indent=2)}")
+        
+        token = oauth.auth0.authorize_access_token()
+        logging.info(f"Auth0 API Response: {token['access_token']}")
+
+        token_payload = validate_token(token['access_token'])
+        logging.info(f"Decoded token payload: {json.dumps(token_payload, indent=2)}")
     
         session["user"] = {
             "token": token,
@@ -197,21 +197,21 @@ def callback():
 @app.route("/login")
 def login():
 
-    # return oauth.auth0.authorize_redirect(
-    #     redirect_uri=url_for("callback", _external=True),
-    #     audience=env.get("AUTH0_AUDIENCE"),
-    #     response_type="code",
-    #     scope="offline_access openid profile email"
-    # )
-    auth0_url = f"https://{env.get('AUTH0_DOMAIN')}/authorize"
-    params = {
-        "response_type": "code",
-        "client_id": env.get("AUTH0_CLIENT_ID"),
-        "redirect_uri": url_for("callback", _external=True),
-        "scope": "openid profile email"
-    }
+    return oauth.auth0.authorize_redirect(
+        redirect_uri=url_for("callback", _external=True),
+        audience=env.get("AUTH0_AUDIENCE"),
+        response_type="code",
+        scope="offline_access openid profile email"
+    )
+    # auth0_url = f"https://{env.get('AUTH0_DOMAIN')}/authorize"
+    # params = {
+    #     "response_type": "code",
+    #     "client_id": env.get("AUTH0_CLIENT_ID"),
+    #     "redirect_uri": url_for("callback", _external=True),
+    #     "scope": "openid profile email"
+    # }
     
-    return redirect(auth0_url + "?" + urlencode(params))
+    # return redirect(auth0_url + "?" + urlencode(params))
 
 
 
