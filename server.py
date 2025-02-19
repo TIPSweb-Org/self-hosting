@@ -155,23 +155,23 @@ def callback():
     logging.info(f"Session state: {session_state}")
 
     try:
-        token = oauth.auth0.authorize_access_token()
-        logging.info(f"Auth0 API Response: {token['access_token']}")
+        #check if session exists before creating new 
+        if "user" in session:
+            token = oauth.auth0.authorize_access_token()
+            logging.info(f"Auth0 API Response: {token['access_token']}")
 
-        token_payload = validate_token(token['access_token'])
-        print("Decoded token payload:", json.dumps(token_payload, indent=2))
+            token_payload = validate_token(token['access_token'])
+            print("Decoded token payload:", json.dumps(token_payload, indent=2))
     
-        session["user"] = {
-            "token": token,
-            "permissions": token_payload.get("permissions", []) if token_payload else []
-        }
+            session["user"] = {
+                "token": token,
+                "permissions": token_payload.get("permissions", []) if token_payload else []
+         }
         
          # Clear state from session??????
         #state = request.args.get('state')
         if state:
             session.pop(state, None)
-        if state != session.get("_state_foo_bar"):
-            raise MismatchingStateError("oopsies")
 
         exchange_details = oauth.auth0.token_endpoint_auth_method
         logging.info(f"Token Exchange Method: {exchange_details}")
