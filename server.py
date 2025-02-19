@@ -105,7 +105,7 @@ def requires_admin(f):
 
 
 app = Flask(__name__, template_folder='Frontend')
-CORS(app, resources={r"/*": {"origins": ["https://tipsweb.me","https://tips-173404681190.us-central1.run.app", "http://localhost:3000"]}})
+CORS(app, resources={r"/*": {"origins": ["https://tipsweb.me","https://tips-173404681190.us-central1.run.app", "http://localhost:3000"]}}, supports_credentials=True, allow_headers=["Authorization", "Content-Type"])
 app.secret_key = env.get("APP_SECRET_KEY")
 
 oauth = OAuth(app)
@@ -136,29 +136,39 @@ def index():
 
 @app.route("/callback", methods=["GET", "POST"])
 def callback():
-    # token = oauth.auth0.authorize_access_token()
-    # #print("Access Token:", token['access_token'])
-
-    # token_payload = validate_token(token['access_token'])
-    # #print("Decoded token payload:", json.dumps(token_payload, indent=2))
-    
-    # session["user"] = {
-    #     "token": token,
-    #     "permissions": token_payload.get("permissions", []) if token_payload else []
-    # }
-    # return redirect("/")
     logging.info("Starting callback process")
     logging.info(f"Request args: {request.args}")
     logging.info(f"Callback URL: {url_for('callback', _external=True)}")
     
-    
+    state = request.args.get('state')
+    #whats the difference, is there even one?
+    session_state = session.get('oauth_state')
+    logging.info(f"Callback state: {state}")
+    logging.info(f"Session state: {session_state}")
+
     try:
         token = oauth.auth0.authorize_access_token()
-        logging.info(f"Auth0 API Response: {token}")
+        logging.info(f"Auth0 API Response: {token['access_token']}")
+
+        token_payload = validate_token(token['access_token'])
+        print("Decoded token payload:", json.dumps(token_payload, indent=2))
+    
+        session["user"] = {
+            "token": token,
+            "permissions": token_payload.get("permissions", []) if token_payload else []
+        }
         
+         # Clear state from session??????
+        #state = request.args.get('state')
+        if state:
+            session.pop(state, None)
+        if state != session.get("_state_foo_bar"):
+            raise MismatchingStateError("oopsies")
+
         exchange_details = oauth.auth0.token_endpoint_auth_method
         logging.info(f"Token Exchange Method: {exchange_details}")
         logging.info("Token obtained successfully")
+
         return redirect("/")
     except Exception as e:
         logging.error(f"Token exchange failed: {str(e)}")
@@ -168,6 +178,8 @@ def callback():
 
 @app.route("/login")
 def login():
+    logging.info(f"Session state before redirect: {session.get('oauth_state')}")
+
     return oauth.auth0.authorize_redirect(
         redirect_uri=url_for("callback", _external=True),
         audience=env.get("AUTH0_AUDIENCE"),
@@ -329,39 +341,8 @@ def auth_info():
     except Exception as e:
         return jsonify({"error": str(e)}), 400
 
-def get_service_account_token():
-    payload = {
-        "client_id": env.get("M2M_CLIENT_ID"),
-        "client_secret": env.get("M2M_CLIENT_SECRET"),
-        "audience": f"https://{env.get('AUTH0_DOMAIN')}/api/v2/",
-        "grant_type": "client_credentials",
-        "scope": "read:users"
-    }
-    
-    token_response = requests.post(
-        f"https://{env.get('AUTH0_DOMAIN')}/oauth/token",
-        json=payload
-    )
-    token = token_response.json()
-    
-    if 'error' in token:
-        raise Exception(token['error_description'])
-    
-    return token["access_token"]
 
-@app.route("/cloud/auth/info", methods=["GET"])
-def cloud_auth_info():
-    try:
-        token = get_service_account_token()
-        headers = {'Authorization': f'Bearer {token}'}
-        response = requests.get(
-            "https://tipsgateway-27nso4bq.uc.gateway.dev/auth/info",
-            headers=headers
-        )
-        return jsonify(response.json())
-    except Exception as e:
-        return jsonify({"error": str(e)}), 400
-    
+
 # # Google Cloud Endpoints Authentication Information Retrieval
 # def _base64_decode(encoded_str):
 #     if encoded_str[0] == "b":
