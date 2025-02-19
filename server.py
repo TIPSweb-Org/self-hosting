@@ -104,9 +104,17 @@ def requires_admin(f):
     return decorated
 
 
+ ## LE APPLICACIÓN ##
 app = Flask(__name__, template_folder='Frontend')
+
 CORS(app, resources={r"/*": {"origins": ["https://tipsweb.me","https://tips-173404681190.us-central1.run.app", "http://localhost:3000"]}}, supports_credentials=True, allow_headers=["Authorization", "Content-Type"])
+
 app.secret_key = env.get("APP_SECRET_KEY")
+
+app.config.update(
+    SESSION_COOKIE_SAMESITE='Lax', ## relaxxxxx cookies, chilll
+    SESSION_COOKIE_SECURE=True,  # Ensure cookies are only sent over HTTPS
+)
 
 oauth = OAuth(app)
 
