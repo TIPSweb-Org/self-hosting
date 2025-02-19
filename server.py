@@ -168,14 +168,11 @@ def callback():
                 "permissions": token_payload.get("permissions", []) if token_payload else []
          }
         
-         # Clear state from session??????
-        #state = request.args.get('state')
-        if state:
-            session.pop(state, None)
+        # Clear state from session??????
+        # state = request.args.get('state')
+        # if state:
+        #     session.pop(state, None)
 
-        exchange_details = oauth.auth0.token_endpoint_auth_method
-        logging.info(f"Token Exchange Method: {exchange_details}")
-        logging.info("Token obtained successfully")
 
         return redirect("/")
     except Exception as e:
