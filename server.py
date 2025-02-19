@@ -105,12 +105,15 @@ oauth.register(
     client_secret=env.get("AUTH0_CLIENT_SECRET"),
     client_kwargs={
         "scope": "offline_access openid profile email",
-        "audience": env.get("AUTH0_AUDIENCE") 
+        "audience": env.get("AUTH0_AUDIENCE"),
+        "response_type": "code",
+        "grant_type": "authorization_code"
     },
     server_metadata_url=f'https://{env.get("AUTH0_DOMAIN")}/.well-known/openid-configuration',
     token_endpoint=f'https://{env.get("AUTH0_DOMAIN")}/oauth/token',
     access_token_url=f'https://{env.get("AUTH0_DOMAIN")}/oauth/token',
-    authorize_url=f'https://{env.get("AUTH0_DOMAIN")}/authorize'
+    authorize_url=f'https://{env.get("AUTH0_DOMAIN")}/authorize',
+    api_base_url=f'https://{env.get("AUTH0_DOMAIN")}'
 )
 
 # Google registration
