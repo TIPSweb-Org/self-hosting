@@ -55,43 +55,20 @@ def find_public_key(kid, provider="auth0"):
     return None
 
 def validate_token(token):
-    # try:
-    #     header = jws.get_unverified_header(token)
-    #     kid = header.get("kid")
-    #     public_key = find_public_key(kid)
-    #     token_payload = jwt.decode(
-    #         token=token,
-    #         key=public_key,
-    #         audience=env.get("AUTH0_AUDIENCE"),  
-    #         issuer=f'https://{env.get("AUTH0_DOMAIN")}/',
-    #         algorithms="RS256"
-    #     )
-    #     return token_payload
-    # except (ExpiredSignatureError, JWTError, JWSError, JWTClaimsError) as error:
-    #      return None
     try:
         header = jws.get_unverified_header(token)
         kid = header.get("kid")
         public_key = find_public_key(kid)
-        
-        if not public_key:
-            return None
-            
         token_payload = jwt.decode(
             token=token,
             key=public_key,
-            audience=env.get("GOOGLE_CLIENT_ID"),  # Change audience to Google Client ID
-            issuer="https://accounts.google.com",  # Update issuer for Google
-            algorithms=["RS256"]
+            audience=env.get("AUTH0_AUDIENCE"),  
+            issuer=f'https://{env.get("AUTH0_DOMAIN")}/',
+            algorithms="RS256"
         )
         return token_payload
-        
-    except ExpiredSignatureError:
-        print("Token expired")
-        return None
-    except (JWTError, JWSError, JWTClaimsError) as e:
-        print(f"Token validation error: {str(e)}")
-        return None
+    except (ExpiredSignatureError, JWTError, JWSError, JWTClaimsError) as error:
+         return None
          
 def requires_admin(f):
     @wraps(f)
@@ -124,15 +101,15 @@ oauth.register(
 )
 
 # Google registration
-oauth.register(
-    "google",
-    client_id=env.get("GOOGLE_CLIENT_ID"),
-    client_secret=env.get("GOOGLE_CLIENT_SECRET"),
-    server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
-    client_kwargs={
-        "scope": "openid email profile"
-    }
-)
+# oauth.register(
+#     "google",
+#     client_id=env.get("GOOGLE_CLIENT_ID"),
+#     client_secret=env.get("GOOGLE_CLIENT_SECRET"),
+#     server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
+#     client_kwargs={
+#         "scope": "openid email profile"
+#     }
+# )
 
 # Controllers API
 @app.route("/")
@@ -157,43 +134,23 @@ def callback():
     #     "permissions": token_payload.get("permissions", []) if token_payload else []
     # }
     # return redirect("/")
-    logging.info(f"Callback received with args: {request.args}")
-    logging.info(f"Session state: {session}")
-    logging.info(f"Current provider: {session.get('oauth_provider')}")
-    
-    provider = session.get('oauth_provider', 'auth0')
-    oauth_client = oauth.google if provider == 'google' else oauth.auth0
     
     try:
+        # Determine which OAuth provider to use based on the state
+        provider = session.get('oauth_provider', 'auth0')
+        oauth_client = oauth.google if provider == 'google' else oauth.auth0
+    
         token = oauth_client.authorize_access_token()
+        userinfo = oauth_client.userinfo()
+        session["user"] = {
+            "token": token,
+            "userinfo": userinfo
+        }
         return redirect("/")
+        
     except Exception as e:
-        logging.error(f"Token error: {str(e)}")
-        # Print all environment variables for debugging
-        logging.info(f"AUTH0_CLIENT_ID: {env.get('AUTH0_CLIENT_ID')}")
-        logging.info(f"AUTH0_DOMAIN: {env.get('AUTH0_DOMAIN')}")
-        logging.info(f"Redirect URI: {url_for('callback', _external=True)}")
-        return str(e), 401
-    # try:
-    #     # Determine which OAuth provider to use based on the state
-    #     provider = session.get('oauth_provider', 'auth0')
-    #     oauth_client = oauth.google if provider == 'google' else oauth.auth0
-        
-    #     logging.info(f"Using OAuth provider: {provider}")
-    #     token = oauth_client.authorize_access_token()
-        
-    #     if provider == 'google':
-    #         user = oauth_client.parse_id_token(token)
-    #     else:
-    #         token_payload = validate_token(token['access_token'])
-    #         user = token_payload
-            
-    #     session["user"] = user
-    #     return redirect("/")
-        
-    # except Exception as e:
-    #     logging.error(f"Callback error details: {str(e)}")
-    #     return f"Authentication failed: {str(e)}", 401
+        logging.error(f"Callback error details: {str(e)}")
+        return f"Authentication failed: {str(e)}", 401
     
 
 # @app.route("/login")
@@ -351,45 +308,45 @@ def create_user():
         }), 400
     
 
-# Google Cloud Endpoints Authentication Information Retrieval
-def _base64_decode(encoded_str):
-    if encoded_str[0] == "b":
-        encoded_str = encoded_str[1:]
-    num_missed_paddings = 4 - len(encoded_str) % 4
-    if num_missed_paddings != 4:
-        encoded_str += "=" * num_missed_paddings
-    return base64.b64decode(encoded_str).decode("utf-8")
+# # Google Cloud Endpoints Authentication Information Retrieval
+# def _base64_decode(encoded_str):
+#     if encoded_str[0] == "b":
+#         encoded_str = encoded_str[1:]
+#     num_missed_paddings = 4 - len(encoded_str) % 4
+#     if num_missed_paddings != 4:
+#         encoded_str += "=" * num_missed_paddings
+#     return base64.b64decode(encoded_str).decode("utf-8")
 
-def auth_info():
-    encoded_info = request.headers.get("X-Endpoint-API-UserInfo", None)
-    if encoded_info:
-        info_json = _base64_decode(encoded_info)
-        user_info = json.loads(info_json)
-    else:
-        user_info = {"id": "anonymous"}
-    return jsonify(user_info)
+# def auth_info():
+#     encoded_info = request.headers.get("X-Endpoint-API-UserInfo", None)
+#     if encoded_info:
+#         info_json = _base64_decode(encoded_info)
+#         user_info = json.loads(info_json)
+#     else:
+#         user_info = {"id": "anonymous"}
+#     return jsonify(user_info)
 
-@app.route("/auth/info/googlejwt", methods=["GET"])
-def auth_info_google_jwt():
-    return auth_info()
+# @app.route("/auth/info/googlejwt", methods=["GET"])
+# def auth_info_google_jwt():
+#     return auth_info()
 
-@app.route("/auth/info/googleidtoken", methods=["GET"])
-def auth_info_google_id_token():
-    return auth_info()
+# @app.route("/auth/info/googleidtoken", methods=["GET"])
+# def auth_info_google_id_token():
+#     return auth_info()
 
-@app.route("/auth/info/firebase", methods=["GET"])
-@cross_origin(send_wildcard=True)
-def auth_info_firebase():
-    return auth_info()
+# @app.route("/auth/info/firebase", methods=["GET"])
+# @cross_origin(send_wildcard=True)
+# def auth_info_firebase():
+#     return auth_info()
 
-@app.errorhandler(http_client.INTERNAL_SERVER_ERROR)
-def unexpected_error(e):
-    logging.getLogger().error("An error occurred while processing the request.", exc_info=True)
-    response = jsonify(
-        {"code": http_client.INTERNAL_SERVER_ERROR, "message": f"Exception: {e}"}
-    )
-    response.status_code = http_client.INTERNAL_SERVER_ERROR
-    return response
+# @app.errorhandler(http_client.INTERNAL_SERVER_ERROR)
+# def unexpected_error(e):
+#     logging.getLogger().error("An error occurred while processing the request.", exc_info=True)
+#     response = jsonify(
+#         {"code": http_client.INTERNAL_SERVER_ERROR, "message": f"Exception: {e}"}
+#     )
+#     response.status_code = http_client.INTERNAL_SERVER_ERROR
+#     return response
 
 
 if __name__ == "__main__":
