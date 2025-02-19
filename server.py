@@ -106,14 +106,9 @@ oauth.register(
     client_kwargs={
         "scope": "offline_access openid profile email",
         "audience": env.get("AUTH0_AUDIENCE"),
-        "response_type": "code",
-        "grant_type": "authorization_code"
     },
     server_metadata_url=f'https://{env.get("AUTH0_DOMAIN")}/.well-known/openid-configuration',
-    token_endpoint=f'https://{env.get("AUTH0_DOMAIN")}/oauth/token',
-    access_token_url=f'https://{env.get("AUTH0_DOMAIN")}/oauth/token',
-    authorize_url=f'https://{env.get("AUTH0_DOMAIN")}/authorize',
-    api_base_url=f'https://{env.get("AUTH0_DOMAIN")}'
+    token_endpoint=f'https://{env.get("AUTH0_DOMAIN")}/oauth/token'
 )
 
 # Google registration
@@ -152,16 +147,15 @@ def callback():
     # return redirect("/")
     logging.info("Starting callback process")
     logging.info(f"Request args: {request.args}")
-    logging.info(f"Auth0 domain: {env.get('AUTH0_DOMAIN')}")
-    logging.info(f"Auth0 client ID: {env.get('AUTH0_CLIENT_ID')}")
     logging.info(f"Callback URL: {url_for('callback', _external=True)}")
-    logging.info(f"Audience: {env.get('AUTH0_AUDIENCE')}")
     
-    provider = session.get('oauth_provider', 'auth0')
-    oauth_client = oauth.google if provider == 'google' else oauth.auth0
     
     try:
-        token = oauth_client.authorize_access_token()
+        token = oauth.auth0.authorize_access_token()
+        logging.info(f"Auth0 API Response: {token}")
+        
+        exchange_details = oauth.auth0.token_endpoint_auth_method
+        logging.info(f"Token Exchange Method: {exchange_details}")
         logging.info("Token obtained successfully")
         return redirect("/")
     except Exception as e:
