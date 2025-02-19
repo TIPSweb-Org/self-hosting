@@ -14,7 +14,7 @@ from requests_oauthlib import OAuth2Session
 from dotenv import find_dotenv, load_dotenv
 from flask import Flask, jsonify, logging, redirect, render_template, session, url_for
 from functools import wraps
-from flask_cors import cross_origin
+from flask_cors import cross_origin, CORS
 from six.moves import http_client
 import logging
 
@@ -70,13 +70,24 @@ def validate_token(token):
         token_payload = jwt.decode(
             token=token,
             key=public_key,
-            audience=env.get("AUTH0_AUDIENCE"),  
+            audience=env.get("AUTH0_AUDIENCE"),
             issuer=f'https://{env.get("AUTH0_DOMAIN")}/',
-            algorithms="RS256"
+            algorithms="RS256",
+            ##new
+            # Add validation for required claims
+            options={
+                'verify_exp': True,
+                'verify_iat': True,
+                'verify_sub': True,
+                'require_exp': True,
+                'require_iat': True,
+                'require_sub': True
+            }
+            ##
         )
         return token_payload
     except (ExpiredSignatureError, JWTError, JWSError, JWTClaimsError) as error:
-         return None
+        return None
     
          
 def requires_admin(f):
@@ -94,6 +105,7 @@ def requires_admin(f):
 
 
 app = Flask(__name__, template_folder='Frontend')
+CORS(app, resources={r"/*": {"origins": ["https://tipsweb.me","https://tips-173404681190.us-central1.run.app", "http://localhost:3000"]}})
 app.secret_key = env.get("APP_SECRET_KEY")
 
 oauth = OAuth(app)
@@ -111,16 +123,6 @@ oauth.register(
     token_endpoint=f'https://{env.get("AUTH0_DOMAIN")}/oauth/token'
 )
 
-# Google registration
-# oauth.register(
-#     "google",
-#     client_id=env.get("GOOGLE_CLIENT_ID"),
-#     client_secret=env.get("GOOGLE_CLIENT_SECRET"),
-#     server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
-#     client_kwargs={
-#         "scope": "openid email profile"
-#     }
-# )
 
 # Controllers API
 @app.route("/")
@@ -162,30 +164,6 @@ def callback():
         logging.error(f"Token exchange failed: {str(e)}")
         logging.error(f"Full error details: {repr(e)}")
         return str(e), 401
-    # try:
-    #     logging.info(f"Callback URL: {url_for('callback', _external=True)}")
-    
-    #     expected_state = session.get('oauth_state')
-    #     received_state = request.args.get('state')
-        
-    #     if expected_state != received_state:
-    #         logging.error(f"State mismatch. Expected: {expected_state}, Received: {received_state}")
-            
-    #     # Determine which OAuth provider to use based on the state
-    #     provider = session.get('oauth_provider', 'auth0')
-    #     oauth_client = oauth.google if provider == 'google' else oauth.auth0
-    
-    #     token = oauth_client.authorize_access_token()
-    #     userinfo = oauth_client.userinfo()
-    #     session["user"] = {
-    #         "token": token,
-    #         "userinfo": userinfo
-    #     }
-    #     return redirect("/")
-        
-    # except Exception as e:
-    #     logging.error(f"Callback error details: {str(e)}")
-    #     return f"Authentication failed: {str(e)}", 401
     
 
 @app.route("/login")
@@ -332,8 +310,58 @@ def create_user():
             "status": "error",
             "message": response_data.get('message', 'Unknown error occurred')
         }), 400
-    
 
+ 
+@app.route("/auth/info", methods=["GET"])
+def auth_info():
+    auth_header = request.headers.get("Authorization", None)
+    if not auth_header:
+        return jsonify({"error": "Authorization header is missing"}), 401
+
+    parts = auth_header.split()
+    if parts[0].lower() != "bearer" or len(parts) != 2:
+        return jsonify({"error": "Invalid Authorization header"}), 401
+
+    token = parts[1]
+    try:
+        token_payload = validate_token(token)
+        return jsonify(token_payload)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+
+def get_service_account_token():
+    payload = {
+        "client_id": env.get("M2M_CLIENT_ID"),
+        "client_secret": env.get("M2M_CLIENT_SECRET"),
+        "audience": f"https://{env.get('AUTH0_DOMAIN')}/api/v2/",
+        "grant_type": "client_credentials",
+        "scope": "read:users"
+    }
+    
+    token_response = requests.post(
+        f"https://{env.get('AUTH0_DOMAIN')}/oauth/token",
+        json=payload
+    )
+    token = token_response.json()
+    
+    if 'error' in token:
+        raise Exception(token['error_description'])
+    
+    return token["access_token"]
+
+@app.route("/cloud/auth/info", methods=["GET"])
+def cloud_auth_info():
+    try:
+        token = get_service_account_token()
+        headers = {'Authorization': f'Bearer {token}'}
+        response = requests.get(
+            "https://tipsgateway-27nso4bq.uc.gateway.dev/auth/info",
+            headers=headers
+        )
+        return jsonify(response.json())
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+    
 # # Google Cloud Endpoints Authentication Information Retrieval
 # def _base64_decode(encoded_str):
 #     if encoded_str[0] == "b":
