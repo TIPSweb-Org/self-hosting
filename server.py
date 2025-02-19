@@ -136,6 +136,12 @@ def callback():
     # return redirect("/")
     
     try:
+        expected_state = session.get('oauth_state')
+        received_state = request.args.get('state')
+        
+        if expected_state != received_state:
+            logging.error(f"State mismatch. Expected: {expected_state}, Received: {received_state}")
+            
         # Determine which OAuth provider to use based on the state
         provider = session.get('oauth_provider', 'auth0')
         oauth_client = oauth.google if provider == 'google' else oauth.auth0
@@ -195,15 +201,6 @@ def logout():
             quote_via=quote_plus,
         )
     )
-
-@app.route("/auth")
-def auth():
-    token = oauth.google.authorize_access_token()
-    validated_token = validate_token(token['id_token'])
-    if validated_token:
-        session['user'] = validated_token
-        return redirect(url_for('index'))
-    return "Token validation failed", 401
 
 
 @app.route('/admin')
