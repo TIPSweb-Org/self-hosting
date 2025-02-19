@@ -111,10 +111,10 @@ CORS(app, resources={r"/*": {"origins": ["https://tipsweb.me","https://tips-1734
 
 app.secret_key = env.get("APP_SECRET_KEY")
 
-app.config.update(
-    SESSION_COOKIE_SAMESITE='Lax', ## relaxxxxx cookies, chilll
-    SESSION_COOKIE_SECURE=True,  # Ensure cookies are only sent over HTTPS
-)
+# app.config.update(
+#     SESSION_COOKIE_SAMESITE='Lax', ## relaxxxxx cookies, chilll
+#     SESSION_COOKIE_SECURE=True,  # Ensure cookies are only sent over HTTPS
+# )
 
 oauth = OAuth(app)
 
@@ -149,33 +149,44 @@ def callback():
     logging.info(f"Callback URL: {url_for('callback', _external=True)}")
     
 
-    state = request.args.get('state')
-    session_state = session.get('oauth_state')
-
-    if state != session_state:
-        logging.error("State mismatch: possible CSRF attack")
-        return jsonify({"error": "State mismatch"}), 401
-
     try:
-        token = oauth.auth0.authorize_access_token()
-        logging.info(f"Auth0 API Response: {token['access_token']}")
-
-        token_payload = validate_token(token['access_token'])
+        # Exchange authorization code for access token
+        payload = {
+            "grant_type": "authorization_code",
+            "code": request.args.get("code"),
+            "redirect_uri": url_for("callback", _external=True),
+            "client_id": env.get("AUTH0_CLIENT_ID"),
+            "client_secret": env.get("AUTH0_CLIENT_SECRET")
+        }
+        
+        token_response = requests.post(
+            f"https://{env.get('AUTH0_DOMAIN')}/oauth/token",
+            headers={"Content-Type": "application/x-www-form-urlencoded"},
+            data=payload
+        )
+        
+        token_response.raise_for_status()  # Raise an exception for bad status codes
+        
+        token = token_response.json()
+        
+        # Validate access token
+        token_payload = validate_token(token["access_token"])
         logging.info(f"Decoded token payload: {json.dumps(token_payload, indent=2)}")
+        
+        # token = oauth.auth0.authorize_access_token()
+        # logging.info(f"Auth0 API Response: {token['access_token']}")
+
+        # token_payload = validate_token(token['access_token'])
+        # logging.info(f"Decoded token payload: {json.dumps(token_payload, indent=2)}")
     
-        #check if session exists before creating new 
-        #if "user" in session:
         session["user"] = {
             "token": token,
             "permissions": token_payload.get("permissions", []) if token_payload else []
         }
-        
-        # Clear state from session??????
-        # state = request.args.get('state')
-        if state:
-            session.pop(state, None)
 
         return redirect("/")
+    except requests.exceptions.HTTPError as http_err:
+        logging.error(f"HTTP error: {http_err}")
     except Exception as e:
         logging.error(f"Token exchange failed: {str(e)}")
         logging.error(f"Full error details: {repr(e)}")
@@ -184,17 +195,22 @@ def callback():
 
 @app.route("/login")
 def login():
-    state = os.urandom(24).hex()  #random state parameter
-    session['oauth_state'] = state  # Store state in the session
-    logging.info(f"Session state before redirect: {session.get('oauth_state')}")
 
-    return oauth.auth0.authorize_redirect(
-        redirect_uri=url_for("callback", _external=True),
-        audience=env.get("AUTH0_AUDIENCE"),
-        response_type="code",
-        scope="offline_access openid profile email",
-        state=state  # Pass the state parameter to the redirect URL
-    )
+    # return oauth.auth0.authorize_redirect(
+    #     redirect_uri=url_for("callback", _external=True),
+    #     audience=env.get("AUTH0_AUDIENCE"),
+    #     response_type="code",
+    #     scope="offline_access openid profile email"
+    # )
+    auth0_url = f"https://{env.get('AUTH0_DOMAIN')}/authorize"
+    params = {
+        "response_type": "code",
+        "client_id": env.get("AUTH0_CLIENT_ID"),
+        "redirect_uri": url_for("callback", _external=True),
+        "scope": "openid profile email"
+    }
+    
+    return redirect(auth0_url + "?" + urlencode(params))
 
 
 
