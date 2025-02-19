@@ -148,10 +148,13 @@ def callback():
     logging.info(f"Request args: {request.args}")
     logging.info(f"Callback URL: {url_for('callback', _external=True)}")
     
+
     state = request.args.get('state')
-    #whats the difference, is there even one?
-    session['oauth_state'] = state
-    logging.info(f"Session state: {session['oauth_state']}")
+    session_state = session.get('oauth_state')
+
+    if state != session_state:
+        logging.error("State mismatch: possible CSRF attack")
+        return jsonify({"error": "State mismatch"}), 401
 
     try:
         token = oauth.auth0.authorize_access_token()
@@ -161,17 +164,16 @@ def callback():
         logging.info(f"Decoded token payload: {json.dumps(token_payload, indent=2)}")
     
         #check if session exists before creating new 
-        if "user" in session:
-            session["user"] = {
-                "token": token,
-                "permissions": token_payload.get("permissions", []) if token_payload else []
-         }
+        #if "user" in session:
+        session["user"] = {
+            "token": token,
+            "permissions": token_payload.get("permissions", []) if token_payload else []
+        }
         
         # Clear state from session??????
         # state = request.args.get('state')
-        # if state:
-        #     session.pop(state, None)
-
+        if state:
+            session.pop(state, None)
 
         return redirect("/")
     except Exception as e:
@@ -182,32 +184,19 @@ def callback():
 
 @app.route("/login")
 def login():
+    state = os.urandom(24).hex()  #random state parameter
+    session['oauth_state'] = state  # Store state in the session
     logging.info(f"Session state before redirect: {session.get('oauth_state')}")
 
     return oauth.auth0.authorize_redirect(
         redirect_uri=url_for("callback", _external=True),
         audience=env.get("AUTH0_AUDIENCE"),
         response_type="code",
-        scope="offline_access openid profile email"
+        scope="offline_access openid profile email",
+        state=state  # Pass the state parameter to the redirect URL
     )
 
-# @app.route("/login")
-# def login():
-    # provider = request.args.get('provider', 'auth0')  # Default to auth0 if no provider specified
-    # session['oauth_provider'] = provider
 
-    # if provider == 'google':
-    #     return oauth.google.authorize_redirect(
-    #         redirect_uri=url_for("callback", _external=True),
-    #         scope="openid email profile"
-    #     )
-    # else:
-    #     return oauth.auth0.authorize_redirect(
-    #         redirect_uri=url_for("callback", _external=True),
-    #         audience=env.get("AUTH0_AUDIENCE"),
-    #         response_type="code",
-    #         scope="offline_access openid profile email"
-    #     )
 
 @app.route("/logout")
 def logout():
