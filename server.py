@@ -107,7 +107,9 @@ oauth.register(
         "scope": "offline_access openid profile email",
     },
     server_metadata_url=f'https://{env.get("AUTH0_DOMAIN")}/.well-known/openid-configuration',
-    token_endpoint=f'https://{env.get("AUTH0_DOMAIN")}/oauth/token'
+    token_endpoint=f'https://{env.get("AUTH0_DOMAIN")}/oauth/token',
+    access_token_url=f'https://{env.get("AUTH0_DOMAIN")}/oauth/token',
+    authorize_url=f'https://{env.get("AUTH0_DOMAIN")}/authorize'
 )
 
 # Google registration
