@@ -25,6 +25,14 @@ from jose import ExpiredSignatureError, JWSError, JWTError, jws, jwt
 from jose.exceptions import JWTClaimsError
 import werkzeug
 
+import sys
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s %(levelname)s: %(message)s',
+    stream=sys.stdout,
+    force=True
+)
+
 ## protecting information from .env file
 ENV_FILE = find_dotenv()
 if ENV_FILE:
@@ -99,6 +107,7 @@ oauth.register(
         "scope": "offline_access openid profile email",
     },
     server_metadata_url=f'https://{env.get("AUTH0_DOMAIN")}/.well-known/openid-configuration',
+    token_endpoint=f'https://{env.get("AUTH0_DOMAIN")}/oauth/token'
 )
 
 # Google registration
