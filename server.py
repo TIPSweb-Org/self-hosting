@@ -136,6 +136,8 @@ def callback():
     # return redirect("/")
     
     try:
+        logging.info(f"Callback URL: {url_for('callback', _external=True)}")
+    
         expected_state = session.get('oauth_state')
         received_state = request.args.get('state')
         
@@ -173,6 +175,9 @@ def login():
     provider = request.args.get('provider', 'auth0')  # Default to auth0 if no provider specified
     session['oauth_provider'] = provider
     
+    state = oauth.auth0.create_authorization_url()[1]
+    session['oauth_state'] = state
+
     if provider == 'google':
         return oauth.google.authorize_redirect(
             redirect_uri=url_for("callback", _external=True),
@@ -183,7 +188,8 @@ def login():
             redirect_uri=url_for("callback", _external=True),
             audience=env.get("AUTH0_AUDIENCE"),
             response_type="code",
-            scope="offline_access openid profile email"
+            scope="offline_access openid profile email",
+            state=state
         )
 
 @app.route("/logout")
