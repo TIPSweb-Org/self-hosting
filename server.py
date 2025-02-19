@@ -150,19 +150,18 @@ def callback():
     
     state = request.args.get('state')
     #whats the difference, is there even one?
-    session_state = session.get('oauth_state')
-    logging.info(f"Callback state: {state}")
-    logging.info(f"Session state: {session_state}")
+    session['oauth_state'] = state
+    logging.info(f"Session state: {session['oauth_state']}")
 
     try:
+        token = oauth.auth0.authorize_access_token()
+        logging.info(f"Auth0 API Response: {token['access_token']}")
+
+        token_payload = validate_token(token['access_token'])
+        logging.info(f"Decoded token payload: {json.dumps(token_payload, indent=2)}")
+    
         #check if session exists before creating new 
         if "user" in session:
-            token = oauth.auth0.authorize_access_token()
-            logging.info(f"Auth0 API Response: {token['access_token']}")
-
-            token_payload = validate_token(token['access_token'])
-            print("Decoded token payload:", json.dumps(token_payload, indent=2))
-    
             session["user"] = {
                 "token": token,
                 "permissions": token_payload.get("permissions", []) if token_payload else []
