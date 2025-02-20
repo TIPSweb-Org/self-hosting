@@ -184,12 +184,14 @@ def callback():
 
 @app.route("/login")
 def login():
-    oauth.auth0.authorize_redirect(
+    return oauth.auth0.authorize_redirect(
         redirect_uri=url_for("callback", _external=True),
         audience=env.get("AUTH0_AUDIENCE"),
         response_type="code",
         scope="offline_access openid profile email"
     )
+
+    
 
     # auth0_url = f"https://{env.get('AUTH0_DOMAIN')}/authorize"
     # params = {
