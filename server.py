@@ -73,17 +73,6 @@ def validate_token(token):
             audience=env.get("AUTH0_AUDIENCE"),
             issuer=f'https://{env.get("AUTH0_DOMAIN")}/',
             algorithms="RS256",
-            ##new
-            # Add validation for required claims
-            options={
-                'verify_exp': True,
-                'verify_iat': True,
-                'verify_sub': True,
-                'require_exp': True,
-                'require_iat': True,
-                'require_sub': True
-            }
-            ##
         )
         return token_payload
     except (ExpiredSignatureError, JWTError, JWSError, JWTClaimsError) as error:
@@ -107,7 +96,7 @@ def requires_admin(f):
  ## LE APPLICACIÓN ##
 app = Flask(__name__, template_folder='Frontend')
 
-CORS(app, resources={r"/*": {"origins": ["https://tipsweb.me","https://tips-173404681190.us-central1.run.app", "http://localhost:3000"]}}, supports_credentials=True, allow_headers=["Authorization", "Content-Type"])
+CORS(app, resources={r"/*": {"origins": ["https://tipsweb.me","https://tips-173404681190.us-central1.run.app", "http://localhost:3000", "https://tips-lrebn2rkuq-uc.a.run.app"]}}, supports_credentials=True, allow_headers=["Authorization", "Content-Type"])
 
 app.secret_key = env.get("APP_SECRET_KEY")
 
@@ -147,7 +136,7 @@ def callback():
     logging.info("Starting callback process")
     logging.info(f"Request args: {request.args}")
     logging.info(f"Callback URL: {url_for('callback', _external=True)}")
-    
+    logging.info(f"Session state: {session.get('oauth_state')}")
 
     try:
         # # Exchange authorization code for access token
@@ -172,8 +161,8 @@ def callback():
         # # Validate access token
         # token_payload = validate_token(token["access_token"])
         # logging.info(f"Decoded token payload: {json.dumps(token_payload, indent=2)}")
-        
-        token = oauth.auth0.authorize_access_token()
+        state = session.pop("oauth_state", None)
+        token = oauth.auth0.authorize_access_token(state = state)
         logging.info(f"Auth0 API Response: {token['access_token']}")
 
         token_payload = validate_token(token['access_token'])
@@ -188,6 +177,27 @@ def callback():
     except requests.exceptions.HTTPError as http_err:
         logging.error(f"HTTP error: {http_err}")
         return str(http_err), 401
+    except requests.exceptions.ConnectionError as conn_err:
+        logging.error(f"Connection error: {conn_err}")
+        return str(conn_err), 503
+    except requests.exceptions.Timeout as timeout_err:
+        logging.error(f"Timeout error: {timeout_err}")
+        return str(timeout_err), 504
+    except requests.exceptions.RequestException as req_err:
+        logging.error(f"Request exception: {req_err}")
+        return str(req_err), 500
+    except ExpiredSignatureError as expired_err:
+        logging.error(f"Expired token signature: {expired_err}")
+        return str(expired_err), 401
+    except JWTClaimsError as claims_err:
+        logging.error(f"Invalid token claims: {claims_err}")
+        return str(claims_err), 401
+    except JWSError as jws_err:
+        logging.error(f"JWS error: {jws_err}")
+        return str(jws_err), 401
+    except JWTError as jwt_err:
+        logging.error(f"JWT error: {jwt_err}")
+        return str(jwt_err), 401
     except Exception as e:
         logging.error(f"Token exchange failed: {str(e)}")
         logging.error(f"Full error details: {repr(e)}")
@@ -196,13 +206,15 @@ def callback():
 
 @app.route("/login")
 def login():
-
-    return oauth.auth0.authorize_redirect(
+    state = oauth.auth0.authorize_redirect(
         redirect_uri=url_for("callback", _external=True),
         audience=env.get("AUTH0_AUDIENCE"),
         response_type="code",
         scope="offline_access openid profile email"
     )
+    session["oauth_state"] = state['state']
+    logging.info(f"Session state before callback: {session.get('oauth_state')}")
+    return state
     # auth0_url = f"https://{env.get('AUTH0_DOMAIN')}/authorize"
     # params = {
     #     "response_type": "code",
