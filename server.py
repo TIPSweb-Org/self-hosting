@@ -162,7 +162,7 @@ def callback():
         # token_payload = validate_token(token["access_token"])
         # logging.info(f"Decoded token payload: {json.dumps(token_payload, indent=2)}")
         state = session.pop("oauth_state", None)
-        token = oauth.auth0.authorize_access_token(state=state)
+        token = oauth.auth0.authorize_access_token()
         logging.info(f"Auth0 API Response: {token['access_token']}")
 
         token_payload = validate_token(token['access_token'])
