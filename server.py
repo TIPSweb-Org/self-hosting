@@ -100,10 +100,10 @@ CORS(app, resources={r"/*": {"origins": ["https://tipsweb.me","https://tips-1734
 
 app.secret_key = env.get("APP_SECRET_KEY")
 
-# app.config.update(
-#     SESSION_COOKIE_SAMESITE='Lax', ## relaxxxxx cookies, chilll
-#     SESSION_COOKIE_SECURE=True,  # Ensure cookies are only sent over HTTPS
-# )
+app.config.update(
+    SESSION_COOKIE_SAMESITE="None", ## relaxxxxx cookies, chilll
+    SESSION_COOKIE_SECURE=True,  # Ensure cookies are only sent over HTTPS
+)
 
 oauth = OAuth(app)
 
