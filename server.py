@@ -28,7 +28,7 @@ import werkzeug
 import sys
 
 from werkzeug.middleware.proxy_fix import ProxyFix
-app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
+
 
 logging.basicConfig(
     level=logging.INFO,
@@ -103,7 +103,7 @@ app = Flask(__name__, template_folder='Frontend')
 CORS(app, resources={r"/*": {"origins": ["https://tipsweb.me","https://tips-173404681190.us-central1.run.app", "http://localhost:3000", "https://tips-lrebn2rkuq-uc.a.run.app"]}}, supports_credentials=True, allow_headers=["Authorization", "Content-Type"])
 
 app.secret_key = env.get("APP_SECRET_KEY")
-
+app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
 app.config.update(
     SESSION_COOKIE_SAMESITE="None", ## relaxxxxx cookies, chilll
     SESSION_COOKIE_SECURE=True,  # Ensure cookies are only sent over HTTPS
