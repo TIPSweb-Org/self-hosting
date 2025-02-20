@@ -26,6 +26,10 @@ from jose.exceptions import JWTClaimsError
 import werkzeug
 
 import sys
+
+from werkzeug.middleware.proxy_fix import ProxyFix
+app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
+
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s %(levelname)s: %(message)s',
@@ -103,7 +107,7 @@ app.secret_key = env.get("APP_SECRET_KEY")
 app.config.update(
     SESSION_COOKIE_SAMESITE="None", ## relaxxxxx cookies, chilll
     SESSION_COOKIE_SECURE=True,  # Ensure cookies are only sent over HTTPS
-    SESSION_COOKIE_DOMAIN="tips-173404681190.us-central1.run.app"
+    # SESSION_COOKIE_DOMAIN="tips-173404681190.us-central1.run.app"
 
 )
 
