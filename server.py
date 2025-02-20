@@ -162,7 +162,7 @@ def callback():
         # token_payload = validate_token(token["access_token"])
         # logging.info(f"Decoded token payload: {json.dumps(token_payload, indent=2)}")
         state = session.pop("oauth_state", None)
-        token = oauth.auth0.authorize_access_token(state = state)
+        token = oauth.auth0.authorize_access_token(state=state)
         logging.info(f"Auth0 API Response: {token['access_token']}")
 
         token_payload = validate_token(token['access_token'])
@@ -206,16 +206,18 @@ def callback():
 
 @app.route("/login")
 def login():
-    state = oauth.auth0.authorize_redirect(
+    response = oauth.auth0.authorize_redirect(
         redirect_uri=url_for("callback", _external=True),
         audience=env.get("AUTH0_AUDIENCE"),
         response_type="code",
         scope="offline_access openid profile email"
     )
+    state = response.headers.get("Location").split("state=")[-1]
     session["oauth_state"] = state
     logging.info(f"Session state before callback: {state}")
 
-    return state
+
+    return response
 
     # auth0_url = f"https://{env.get('AUTH0_DOMAIN')}/authorize"
     # params = {
