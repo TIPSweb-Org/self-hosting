@@ -212,9 +212,11 @@ def login():
         response_type="code",
         scope="offline_access openid profile email"
     )
-    session["oauth_state"] = state['state']
-    logging.info(f"Session state before callback: {session.get('oauth_state')}")
+    session["oauth_state"] = state
+    logging.info(f"Session state before callback: {state}")
+
     return state
+
     # auth0_url = f"https://{env.get('AUTH0_DOMAIN')}/authorize"
     # params = {
     #     "response_type": "code",
