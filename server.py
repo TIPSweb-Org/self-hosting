@@ -103,6 +103,8 @@ app.secret_key = env.get("APP_SECRET_KEY")
 app.config.update(
     SESSION_COOKIE_SAMESITE="None", ## relaxxxxx cookies, chilll
     SESSION_COOKIE_SECURE=True,  # Ensure cookies are only sent over HTTPS
+    SESSION_COOKIE_DOMAIN="tips-173404681190.us-central1.run.app"
+
 )
 
 oauth = OAuth(app)
