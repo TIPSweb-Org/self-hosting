@@ -110,7 +110,7 @@ app.config.update(
     # SESSION_COOKIE_DOMAIN="tips-173404681190.us-central1.run.app"
 
 )
-
+app.config['PREFERRED_URL_SCHEME'] = 'https'
 oauth = OAuth(app)
 
 #oauth registration
