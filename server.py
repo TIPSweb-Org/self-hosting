@@ -1,4 +1,3 @@
-
 import base64
 import json
 import os
@@ -12,23 +11,17 @@ import flask
 import requests
 from requests_oauthlib import OAuth2Session
 from dotenv import find_dotenv, load_dotenv
-from flask import Flask, jsonify, logging, redirect, render_template, session, url_for
+from flask import Flask, jsonify, logging, redirect, render_template, session, url_for, request
 from functools import wraps
 from flask_cors import cross_origin, CORS
-from six.moves import http_client
 import logging
-
-import requests
-from flask import request
+import sys
 
 from jose import ExpiredSignatureError, JWSError, JWTError, jws, jwt
 from jose.exceptions import JWTClaimsError
 import werkzeug
 
-import sys
-
 # from werkzeug.middleware.proxy_fix import ProxyFix
-
 
 logging.basicConfig(
     level=logging.INFO,
@@ -37,33 +30,29 @@ logging.basicConfig(
     force=True
 )
 
-## protecting information from .env file
+## Load environment variables
 ENV_FILE = find_dotenv()
 if ENV_FILE:
     load_dotenv(ENV_FILE)
 
+# Log environment load confirmation (be cautious not to log secrets)
+logging.info("Environment variables loaded.")
 
 auth0_jwks_endpoint = env.get("JWKS_ENDPOINT")
 auth0_jwks = requests.get(auth0_jwks_endpoint).json()["keys"]
+logging.info("Retrieved Auth0 JWKS.")
 
-# Google JWKS endpoint
 google_jwks_endpoint = "https://www.googleapis.com/oauth2/v3/certs"
 google_jwks = requests.get(google_jwks_endpoint).json()["keys"]
-
-
-# def find_public_key(kid):
-#     for key in jwks:
-#         if key.get("kid") == kid:
-#             print(f"Found public key for kid: {kid}")
-#             return key
-#     print(f"No public key found for kid: {kid}")
-#     return None
+logging.info("Retrieved Google JWKS.")
 
 def find_public_key(kid, provider="auth0"):
     keys = auth0_jwks if provider == "auth0" else google_jwks
     for key in keys:
         if key.get("kid") == kid:
+            logging.info(f"Found public key for kid: {kid} from {provider}")
             return key
+    logging.error(f"No public key found for kid: {kid} from {provider}")
     return None
 
 def validate_token(token):
@@ -78,42 +67,43 @@ def validate_token(token):
             issuer=f'https://{env.get("AUTH0_DOMAIN")}/',
             algorithms="RS256",
         )
+        logging.info("Token validated successfully.")
         return token_payload
     except (ExpiredSignatureError, JWTError, JWSError, JWTClaimsError) as error:
+        logging.error(f"Token validation error: {error}")
         return None
-    
-         
+
 def requires_admin(f):
     @wraps(f)
     def decorated(*args, **kwargs):
         user = session.get("user")
         if not user or "token" not in user:
+            logging.warning("Unauthorized access attempt to admin area - user not logged in.")
             return redirect(url_for("login"))
             
         token_payload = validate_token(user["token"]["access_token"])
         if token_payload and "admin" in token_payload.get("permissions", []):
             return f(*args, **kwargs)
+        logging.warning("Unauthorized access attempt to admin area - insufficient permissions.")
         return redirect(url_for("index"))
     return decorated
 
-
- ## LE APPLICACIÓN ##
+## Initialize Flask App
 app = Flask(__name__, template_folder='Frontend')
-
-CORS(app, resources={r"/*": {"origins": ["https://tipsweb.me","https://tips-173404681190.us-central1.run.app", "http://localhost:3000", "https://tips-lrebn2rkuq-uc.a.run.app"]}}, supports_credentials=True, allow_headers=["Authorization", "Content-Type"])
+CORS(app, resources={r"/*": {"origins": ["https://tipsweb.me","https://tips-173404681190.us-central1.run.app", "http://localhost:3000", "https://tips-lrebn2rkuq-uc.a.run.app"]}},
+     supports_credentials=True, allow_headers=["Authorization", "Content-Type"])
 
 app.secret_key = env.get("APP_SECRET_KEY")
-#app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
+# Uncomment and configure ProxyFix if needed
+# app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
 app.config.update(
-    SESSION_COOKIE_SAMESITE="None", ## relaxxxxx cookies, chilll
-    SESSION_COOKIE_SECURE=True,  # Ensure cookies are only sent over HTTPS
-    # SESSION_COOKIE_DOMAIN="tips-173404681190.us-central1.run.app"
-
+    SESSION_COOKIE_SAMESITE="None",
+    SESSION_COOKIE_SECURE=True,
 )
 app.config['PREFERRED_URL_SCHEME'] = 'https'
 oauth = OAuth(app)
 
-#oauth registration
+# OAuth registration
 oauth.register(
     "auth0",
     client_id=env.get("AUTH0_CLIENT_ID"),
@@ -126,70 +116,19 @@ oauth.register(
     token_endpoint=f'https://{env.get("AUTH0_DOMAIN")}/oauth/token'
 )
 
-
-# Controllers API
+# Routes
 @app.route("/")
 def index():
+    logging.info("Rendering index page.")
     return render_template(
         "index.html",
         session=session.get("user"),
         pretty=json.dumps(session.get("user"), indent=4),
     )
 
-
-@app.route("/callback", methods=["GET", "POST"])
-def callback():
-    logging.info("Starting callback process")
-    logging.info(f"Request args: {request.args}")
-    logging.info(f"Callback URL: {url_for('callback', _external=True)}")
-    logging.info(f"Session state: {request.args.get('state')}")
-
-    try:
-        # # Exchange authorization code for access token
-        # payload = {
-        #     "grant_type": "authorization_code",
-        #     "code": request.args.get("code"),
-        #     "redirect_uri": url_for("callback", _external=True),
-        #     "client_id": env.get("AUTH0_CLIENT_ID"),
-        #     "client_secret": env.get("AUTH0_CLIENT_SECRET")
-        # }
-        
-        # token_response = requests.post(
-        #     f"https://{env.get('AUTH0_DOMAIN')}/oauth/token",
-        #     headers={"Content-Type": "application/x-www-form-urlencoded"},
-        #     data=payload
-        # )
-        
-        # token_response.raise_for_status()  # Raise an exception for bad status codes
-        
-        # token = token_response.json()
-        
-        # # Validate access token
-        # token_payload = validate_token(token["access_token"])
-        # logging.info(f"Decoded token payload: {json.dumps(token_payload, indent=2)}")
-        token = oauth.auth0.authorize_access_token()
-        logging.info(f"Auth0 API Response: {token['access_token']}")
-
-        token_payload = validate_token(token['access_token'])
-        logging.info(f"Decoded token payload: {json.dumps(token_payload, indent=2)}")
-    
-        session["user"] = {
-            "token": token,
-            "permissions": token_payload.get("permissions", []) if token_payload else []
-        }
-
-        return redirect("/")
-    except requests.exceptions.HTTPError as http_err:
-        logging.error(f"HTTP error: {http_err}")
-        return str(http_err), 401
-    except Exception as e:
-        logging.error(f"Token exchange failed: {str(e)}")
-        logging.error(f"Full error details: {repr(e)}")
-        return str(e), 401
-    
-
 @app.route("/login")
 def login():
+    logging.info("Initiating login, redirecting to Auth0.")
     return oauth.auth0.authorize_redirect(
         redirect_uri=url_for("callback", _external=True),
         audience=env.get("AUTH0_AUDIENCE"),
@@ -197,24 +136,49 @@ def login():
         scope="offline_access openid profile email"
     )
 
+@app.route("/callback", methods=["GET", "POST"])
+def callback():
+    logging.info("Starting callback process")
+    logging.info(f"Request args: {request.args}")
+    logging.info(f"Callback URL: {url_for('callback', _external=True)}")
+    logging.info(f"Incoming state: {request.args.get('state')}")
     
+    # Optionally log the expected state if stored in session (Authlib might store it automatically)
+    expected_state = session.get('auth_state')
+    logging.info(f"Expected state from session: {expected_state}")
 
-    # auth0_url = f"https://{env.get('AUTH0_DOMAIN')}/authorize"
-    # params = {
-    #     "response_type": "code",
-    #     "client_id": env.get("AUTH0_CLIENT_ID"),
-    #     "redirect_uri": url_for("callback", _external=True),
-    #     "scope": "openid profile email"
-    # }
-    
-    # return redirect(auth0_url + "?" + urlencode(params))
+    try:
+        token = oauth.auth0.authorize_access_token()
+        logging.info(f"Received token from Auth0: {token}")
+        if 'access_token' not in token:
+            logging.error("Access token missing in token response.")
+            return "Access token missing", 401
 
+        token_payload = validate_token(token['access_token'])
+        if not token_payload:
+            logging.error("Token validation failed.")
+            return "Invalid token", 401
 
+        logging.info(f"Decoded token payload: {json.dumps(token_payload, indent=2)}")
+        session["user"] = {
+            "token": token,
+            "permissions": token_payload.get("permissions", [])
+        }
+        logging.info("User session updated successfully.")
+        return redirect("/")
+    except requests.exceptions.HTTPError as http_err:
+        logging.error(f"HTTP error during token exchange: {http_err}")
+        return str(http_err), 401
+    except Exception as e:
+        logging.error(f"Token exchange failed: {str(e)}")
+        logging.error(f"Full error details: {repr(e)}")
+        return str(e), 401
 
 @app.route("/logout")
 def logout():
+    logging.info("User logging out, clearing session.")
     session.clear()
-    return redirect(
+    logout_url = (
         "https://"
         + env.get("AUTH0_DOMAIN")
         + "/v2/logout?"
@@ -226,13 +190,13 @@ def logout():
             quote_via=quote_plus,
         )
     )
-
+    logging.info(f"Redirecting to logout URL: {logout_url}")
+    return redirect(logout_url)
 
 @app.route('/admin')
 @requires_admin
 def admin_dashboard():
-    #print("Current session user:", json.dumps(session.get("user"), indent=2))
-
+    logging.info("Accessing admin dashboard.")
     payload = {
         "client_id": env.get("M2M_CLIENT_ID"),
         "client_secret": env.get("M2M_CLIENT_SECRET"),
@@ -248,6 +212,7 @@ def admin_dashboard():
     token = token_response.json()
     
     if 'error' in token:
+        logging.error(f"Error obtaining M2M token: {token.get('error_description')}")
         return render_template('admin-dash.html', error=token['error_description'])
         
     headers = {'Authorization': f'Bearer {token["access_token"]}'}
@@ -255,11 +220,9 @@ def admin_dashboard():
         f'https://{env.get("AUTH0_DOMAIN")}/api/v2/users',
         headers=headers
     ).json()
-
-    #users = users_response.json()
     
+    logging.info("Fetched admin users successfully.")
     return render_template('admin-dash.html', users=users_response)
-
 
 @app.route('/admin/delete-user/<user_id>', methods=['DELETE'])
 @requires_admin
@@ -392,6 +355,5 @@ def auth_info():
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 3000))
+    logging.info(f"Starting Flask app on port {port}")
     app.run(host="0.0.0.0", port=port)
-    #app.run(host="0.0.0.0", port=3000)
-
