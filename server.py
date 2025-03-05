@@ -96,10 +96,13 @@ CORS(app, resources={r"/*": {"origins": ["https://tipsweb.me","https://tips-1734
 app.secret_key = env.get("APP_SECRET_KEY")
 # Uncomment and configure ProxyFix if needed
 # app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
+
+## CONFIGURING SESSION COOKIE SAMESITE CAUSES MISMATCH STATE ERROR IN LOCAL HOST DEPLOYMENT 
 app.config.update(
-    SESSION_COOKIE_SAMESITE="None",
+   # SESSION_COOKIE_SAMESITE="None",
     SESSION_COOKIE_SECURE=True,
 )
+
 app.config['PREFERRED_URL_SCHEME'] = 'https'
 oauth = OAuth(app)
 
@@ -129,12 +132,14 @@ def index():
 @app.route("/login")
 def login():
     logging.info("Initiating login, redirecting to Auth0.")
-    return oauth.auth0.authorize_redirect(
+    auth_redirect = oauth.auth0.authorize_redirect(
         redirect_uri=url_for("callback", _external=True),
         audience=env.get("AUTH0_AUDIENCE"),
         response_type="code",
         scope="offline_access openid profile email"
     )
+    logging.info(f"State after redirect initialization: {session.get('auth_state')}")
+    return auth_redirect
 
 @app.route("/callback", methods=["GET", "POST"])
 def callback():
@@ -143,7 +148,7 @@ def callback():
     logging.info(f"Callback URL: {url_for('callback', _external=True)}")
     logging.info(f"Incoming state: {request.args.get('state')}")
     
-    # Optionally log the expected state if stored in session (Authlib might store it automatically)
+    #log expected state if stored in session (Authlib might store it automatically)
     expected_state = session.get('auth_state')
     logging.info(f"Expected state from session: {expected_state}")
 
