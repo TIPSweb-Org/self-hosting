@@ -90,7 +90,7 @@ def requires_admin(f):
 
 ## Initialize Flask App
 app = Flask(__name__, template_folder='Frontend')
-CORS(app, resources={r"/*": {"origins": ["https://tipsweb.me","https://tips-173404681190.us-central1.run.app", "http://localhost:3000", "https://tips-lrebn2rkuq-uc.a.run.app"]}},
+CORS(app, resources={r"/*": {"origins": ["https://dev-ham70vsz2hjzbwgm.us.auth0.com","https://tipsweb.me","https://tips-173404681190.us-central1.run.app", "http://localhost:3000", "https://tips-lrebn2rkuq-uc.a.run.app"]}},
      supports_credentials=True, allow_headers=["Authorization", "Content-Type"])
 
 app.secret_key = env.get("APP_SECRET_KEY")
