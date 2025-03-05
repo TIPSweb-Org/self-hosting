@@ -101,6 +101,7 @@ app.secret_key = env.get("APP_SECRET_KEY")
 app.config.update(
    # SESSION_COOKIE_SAMESITE="None",
     SESSION_COOKIE_SECURE=True,
+    SESSION_COOKIE_HTTPONLY=True
 )
 
 app.config['PREFERRED_URL_SCHEME'] = 'https'
@@ -138,7 +139,7 @@ def login():
         response_type="code",
         scope="offline_access openid profile email"
     )
-    logging.info(f"State after redirect initialization: {session.get('auth_state')}")
+    logging.info(f"State after redirect initialization: {session.get('oauth_state')}")
     return auth_redirect
 
 @app.route("/callback", methods=["GET", "POST"])
@@ -149,7 +150,7 @@ def callback():
     logging.info(f"Incoming state: {request.args.get('state')}")
     
     #log expected state if stored in session (Authlib might store it automatically)
-    expected_state = session.get('auth_state')
+    expected_state = session.get('oauth_state')
     logging.info(f"Expected state from session: {expected_state}")
 
     try:
