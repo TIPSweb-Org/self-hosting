@@ -91,7 +91,7 @@ def requires_admin(f):
 
 ## Initialize Flask App
 app = Flask(__name__, template_folder='Frontend')
-CORS(app, resources={r"/*": {"origins": ["https://dev-ham70vsz2hjzbwgm.us.auth0.com","https://tipsweb.me","https://tips-173404681190.us-central1.run.app", "http://localhost:3000", "https://tips-lrebn2rkuq-uc.a.run.app"]}},
+CORS(app, resources={r"/*": {"origins": [f"https://{env.get('AUTH0_DOMAIN')}", "https://dev-ham70vsz2hjzbwgm.us.auth0.com","https://tipsweb.me","https://tips-173404681190.us-central1.run.app", "http://localhost:3000", "https://tips-lrebn2rkuq-uc.a.run.app"]}},
      supports_credentials=True, allow_headers=["Authorization", "Content-Type"])
 
 app.secret_key = env.get("APP_SECRET_KEY")
@@ -99,11 +99,11 @@ app.secret_key = env.get("APP_SECRET_KEY")
 # app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
 
 ## CONFIGURING SESSION COOKIE SAMESITE CAUSES MISMATCH STATE ERROR IN LOCAL HOST DEPLOYMENT 
-app.config.update(
-   # SESSION_COOKIE_SAMESITE="None",
-    #SESSION_COOKIE_SECURE=True,
-    #SESSION_COOKIE_HTTPONLY=True
-)
+# app.config.update(
+#     SESSION_COOKIE_SAMESITE="None",
+#     SESSION_COOKIE_SECURE=True,
+#     SESSION_COOKIE_HTTPONLY=True
+# )
 
 app.config['PREFERRED_URL_SCHEME'] = 'https'
 oauth = OAuth(app)
@@ -133,41 +133,26 @@ def index():
 
 @app.route("/login")
 def login():
-    logging.info("Initiating login, redirecting to Auth0.")
     auth_redirect = oauth.auth0.authorize_redirect(
         redirect_uri=url_for("callback", _external=True),
         audience=env.get("AUTH0_AUDIENCE"),
         response_type="code",
         scope="offline_access openid profile email"
     )
-    logging.info(f"State after redirect initialization: {session.get('oauth_state')}")
     return auth_redirect
 
 @app.route("/callback", methods=["GET", "POST"])
 def callback():
-    logging.info("Starting callback process")
-    logging.info(f"Request args: {request.args}")
-    logging.info(f"Callback URL: {url_for('callback', _external=True)}")
-    logging.info(f"Incoming state: {request.args.get('state')}")
-
     try:
         token = oauth.auth0.authorize_access_token()
-        logging.info(f"Received token from Auth0: {token}")
-        if 'access_token' not in token:
-            logging.error("Access token missing in token response.")
-            return "Access token missing", 401
 
         token_payload = validate_token(token['access_token'])
-        if not token_payload:
-            logging.error("Token validation failed.")
-            return "Invalid token", 401
 
-        logging.info(f"Decoded token payload: {json.dumps(token_payload, indent=2)}")
         session["user"] = {
             "token": token,
             "permissions": token_payload.get("permissions", [])
         }
-        logging.info("User session updated successfully.")
+
         return redirect("/")
     except requests.exceptions.HTTPError as http_err:
         logging.error(f"HTTP error during token exchange: {http_err}")
