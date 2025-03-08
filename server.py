@@ -23,6 +23,7 @@ import werkzeug
 
 # from werkzeug.middleware.proxy_fix import ProxyFix
 ###TODO: change aut0 from single page app to regular web app
+##TODO: back button for admin dashboard
 
 logging.basicConfig(
     level=logging.INFO,
@@ -133,6 +134,11 @@ def index():
 
 @app.route("/login")
 def login():
+    #configuring custom domain for oauth
+    oauth.auth0.api_base_url = f"https://{env.get('AUTH0_DOMAIN')}"
+    oauth.auth0.authorize_url = f"https://{env.get('AUTH0_DOMAIN')}/authorize"
+    oauth.auth0.access_token_url = f"https://{env.get('AUTH0_DOMAIN')}/oauth/token"
+
     auth_redirect = oauth.auth0.authorize_redirect(
         redirect_uri=url_for("callback", _external=True),
         audience=env.get("AUTH0_AUDIENCE"),
