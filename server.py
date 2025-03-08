@@ -22,6 +22,7 @@ from jose.exceptions import JWTClaimsError
 import werkzeug
 
 # from werkzeug.middleware.proxy_fix import ProxyFix
+###TODO: change aut0 from single page app to regular web app
 
 logging.basicConfig(
     level=logging.INFO,
@@ -100,8 +101,8 @@ app.secret_key = env.get("APP_SECRET_KEY")
 ## CONFIGURING SESSION COOKIE SAMESITE CAUSES MISMATCH STATE ERROR IN LOCAL HOST DEPLOYMENT 
 app.config.update(
    # SESSION_COOKIE_SAMESITE="None",
-    SESSION_COOKIE_SECURE=True,
-    SESSION_COOKIE_HTTPONLY=True
+    #SESSION_COOKIE_SECURE=True,
+    #SESSION_COOKIE_HTTPONLY=True
 )
 
 app.config['PREFERRED_URL_SCHEME'] = 'https'
@@ -148,10 +149,6 @@ def callback():
     logging.info(f"Request args: {request.args}")
     logging.info(f"Callback URL: {url_for('callback', _external=True)}")
     logging.info(f"Incoming state: {request.args.get('state')}")
-    
-    #log expected state if stored in session (Authlib might store it automatically)
-    expected_state = session.get('oauth_state')
-    logging.info(f"Expected state from session: {expected_state}")
 
     try:
         token = oauth.auth0.authorize_access_token()
@@ -206,13 +203,13 @@ def admin_dashboard():
     payload = {
         "client_id": env.get("M2M_CLIENT_ID"),
         "client_secret": env.get("M2M_CLIENT_SECRET"),
-        "audience": f"https://{env.get('AUTH0_DOMAIN')}/api/v2/",
+        "audience": f"https://{env.get('M2M_DOMAIN')}/api/v2/",
         "grant_type": "client_credentials",
         "scope": "read:users"
     }
     
     token_response = requests.post(
-        f"https://{env.get('AUTH0_DOMAIN')}/oauth/token",
+        f"https://{env.get('M2M_DOMAIN')}/oauth/token",
         json=payload
     )
     token = token_response.json()
@@ -223,7 +220,7 @@ def admin_dashboard():
         
     headers = {'Authorization': f'Bearer {token["access_token"]}'}
     users_response = requests.get(
-        f'https://{env.get("AUTH0_DOMAIN")}/api/v2/users',
+        f'https://{env.get("M2M_DOMAIN")}/api/v2/users',
         headers=headers
     ).json()
     
@@ -236,20 +233,20 @@ def delete_user(user_id):
     payload = {
         "client_id": env.get("M2M_CLIENT_ID"),
         "client_secret": env.get("M2M_CLIENT_SECRET"),
-        "audience": f"https://{env.get('AUTH0_DOMAIN')}/api/v2/",
+        "audience": f"https://{env.get('M2M_DOMAIN')}/api/v2/",
         "grant_type": "client_credentials",
         "scope": "delete:users"
     }
     
     token_response = requests.post(
-        f"https://{env.get('AUTH0_DOMAIN')}/oauth/token",
+        f"https://{env.get('M2M_DOMAIN')}/oauth/token",
         json=payload
     )
     token = token_response.json()
     
     headers = {'Authorization': f'Bearer {token["access_token"]}'}
     delete_response = requests.delete(
-        f'https://{env.get("AUTH0_DOMAIN")}/api/v2/users/{user_id}',
+        f'https://{env.get("M2M_DOMAIN")}/api/v2/users/{user_id}',
         headers=headers
     )
     
@@ -264,13 +261,13 @@ def create_user():
     payload = {
         "client_id": env.get("M2M_CLIENT_ID"),
         "client_secret": env.get("M2M_CLIENT_SECRET"),
-        "audience": f"https://{env.get('AUTH0_DOMAIN')}/api/v2/",
+        "audience": f"https://{env.get('M2M_DOMAIN')}/api/v2/",
         "grant_type": "client_credentials",
         "scope": "create:users"
     }
     
     token_response = requests.post(
-        f"https://{env.get('AUTH0_DOMAIN')}/oauth/token",
+        f"https://{env.get('M2M_DOMAIN')}/oauth/token",
         json=payload
     )
     token = token_response.json()
@@ -283,7 +280,7 @@ def create_user():
     }
     
     create_response = requests.post(
-        f'https://{env.get("AUTH0_DOMAIN")}/api/v2/users',
+        f'https://{env.get("M2M_DOMAIN")}/api/v2/users',
         headers=headers,
         json=user_data
     )
@@ -318,48 +315,7 @@ def auth_info():
 
 
 
-# # Google Cloud Endpoints Authentication Information Retrieval
-# def _base64_decode(encoded_str):
-#     if encoded_str[0] == "b":
-#         encoded_str = encoded_str[1:]
-#     num_missed_paddings = 4 - len(encoded_str) % 4
-#     if num_missed_paddings != 4:
-#         encoded_str += "=" * num_missed_paddings
-#     return base64.b64decode(encoded_str).decode("utf-8")
-
-# def auth_info():
-#     encoded_info = request.headers.get("X-Endpoint-API-UserInfo", None)
-#     if encoded_info:
-#         info_json = _base64_decode(encoded_info)
-#         user_info = json.loads(info_json)
-#     else:
-#         user_info = {"id": "anonymous"}
-#     return jsonify(user_info)
-
-# @app.route("/auth/info/googlejwt", methods=["GET"])
-# def auth_info_google_jwt():
-#     return auth_info()
-
-# @app.route("/auth/info/googleidtoken", methods=["GET"])
-# def auth_info_google_id_token():
-#     return auth_info()
-
-# @app.route("/auth/info/firebase", methods=["GET"])
-# @cross_origin(send_wildcard=True)
-# def auth_info_firebase():
-#     return auth_info()
-
-# @app.errorhandler(http_client.INTERNAL_SERVER_ERROR)
-# def unexpected_error(e):
-#     logging.getLogger().error("An error occurred while processing the request.", exc_info=True)
-#     response = jsonify(
-#         {"code": http_client.INTERNAL_SERVER_ERROR, "message": f"Exception: {e}"}
-#     )
-#     response.status_code = http_client.INTERNAL_SERVER_ERROR
-#     return response
-
-
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 3000))
     logging.info(f"Starting Flask app on port {port}")
-    app.run(host="0.0.0.0", port=port)
+    app.run(debug=True, host="0.0.0.0", port=port)
