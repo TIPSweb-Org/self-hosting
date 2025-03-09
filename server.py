@@ -134,14 +134,24 @@ def index():
 
 @app.route("/login")
 def login():
-    auth_redirect = oauth.auth0.authorize_redirect(
-        redirect_uri=url_for("callback", _external=True, _scheme='http' if is_local else 'https'),
-        audience=env.get("AUTH0_AUDIENCE"),
-        response_type="code",
-        scope="offline_access openid profile email"
-    )
-    auth_url = f"https://{env.get("AUTH0_DOMAIN")}/authorize?{auth_redirect.location.split('?')[1]}"
-    return redirect(auth_url) #auth_redirect
+#     auth_redirect = oauth.auth0.authorize_redirect(
+#         redirect_uri=url_for("callback", _external=True, _scheme='http' if is_local else 'https'),
+#         audience=env.get("AUTH0_AUDIENCE"),
+#         response_type="code",
+#         scope="offline_access openid profile email"
+#     )
+#     auth_url = f"https://{env.get("AUTH0_DOMAIN")}/authorize?{auth_redirect.location.split('?')[1]}"
+#     return redirect(auth_url) #auth_redirect
+    params = {
+        'client_id': env.get('AUTH0_CLIENT_ID'),
+        'redirect_uri': url_for('callback', _external=True, _scheme='https'),
+        'response_type': 'code',
+        'scope': 'offline_access openid profile email',
+        'audience': env.get('AUTH0_AUDIENCE')
+    }
+    
+    auth_url = f"https://auth.tipsweb.me/authorize?{urlencode(params)}"
+    return redirect(auth_url, code=302)
 
 @app.route("/callback", methods=["GET", "POST"])
 def callback():
