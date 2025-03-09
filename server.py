@@ -115,6 +115,8 @@ oauth.register(
     client_kwargs={
         "scope": "offline_access openid profile email",
         "audience": env.get("AUTH0_AUDIENCE"),
+        "__tenant": env.get("AUTH0_DOMAIN"),
+        "__token_issuer": f"https://{env.get("AUTH0_ISSUER")}"
     },
     server_metadata_url=f'https://{env.get("AUTH0_DOMAIN")}/.well-known/openid-configuration',
     token_endpoint=f'https://{env.get("AUTH0_DOMAIN")}/oauth/token'
