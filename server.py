@@ -115,8 +115,8 @@ oauth.register(
     client_kwargs={
         "scope": "offline_access openid profile email",
         "audience": env.get("AUTH0_AUDIENCE"),
-        "__tenant": env.get("AUTH0_DOMAIN"),
-        "__token_issuer": f"https://{env.get("AUTH0_ISSUER")}"
+        # "__tenant": env.get("AUTH0_DOMAIN"),
+        # "__token_issuer": f"https://{env.get("AUTH0_ISSUER")}"
     },
     server_metadata_url=f'https://{env.get("AUTH0_DOMAIN")}/.well-known/openid-configuration',
     token_endpoint=f'https://{env.get("AUTH0_DOMAIN")}/oauth/token'
@@ -136,12 +136,12 @@ def index():
 def login():
     auth_redirect = oauth.auth0.authorize_redirect(
         redirect_uri=url_for("callback", _external=True, _scheme='http' if is_local else 'https'),
-        #redirect_uri=f"https://{env.get("AUTH0_DOMAIN")}/callback",
         audience=env.get("AUTH0_AUDIENCE"),
         response_type="code",
         scope="offline_access openid profile email"
     )
-    return auth_redirect
+    auth_url = f"https://{env.get("AUTH0_DOMAIN")}/authorize?{auth_redirect.location.split('?')[1]}"
+    return redirect(auth_url) #auth_redirect
 
 @app.route("/callback", methods=["GET", "POST"])
 def callback():
