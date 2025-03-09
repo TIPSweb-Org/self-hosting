@@ -40,16 +40,13 @@ if ENV_FILE:
 # Log environment load confirmation (be cautious not to log secrets)
 logging.info("Environment variables loaded.")
 
-auth0_jwks_endpoint = env.get("JWKS_ENDPOINT")
-auth0_jwks = requests.get(auth0_jwks_endpoint).json()["keys"]
+jwks_endpoint = env.get("JWKS_ENDPOINT")
+jwks = requests.get(jwks_endpoint).json()["keys"]
 logging.info("Retrieved Auth0 JWKS.")
 
-google_jwks_endpoint = "https://www.googleapis.com/oauth2/v3/certs"
-google_jwks = requests.get(google_jwks_endpoint).json()["keys"]
-logging.info("Retrieved Google JWKS.")
 
 def find_public_key(kid, provider="auth0"):
-    keys = auth0_jwks if provider == "auth0" else google_jwks
+    keys = jwks 
     for key in keys:
         if key.get("kid") == kid:
             logging.info(f"Found public key for kid: {kid} from {provider}")
@@ -96,6 +93,7 @@ CORS(app, resources={r"/*": {"origins": [f"https://{env.get('AUTH0_DOMAIN')}", "
      supports_credentials=True, allow_headers=["Authorization", "Content-Type"])
 
 app.secret_key = env.get("APP_SECRET_KEY")
+is_local = env.get('FLASK_ENV') == 'development'
 # Uncomment and configure ProxyFix if needed
 # app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
 
@@ -134,13 +132,9 @@ def index():
 
 @app.route("/login")
 def login():
-    #configuring custom domain for oauth
-    oauth.auth0.api_base_url = f"https://{env.get('AUTH0_DOMAIN')}"
-    oauth.auth0.authorize_url = f"https://{env.get('AUTH0_DOMAIN')}/authorize"
-    oauth.auth0.access_token_url = f"https://{env.get('AUTH0_DOMAIN')}/oauth/token"
-
     auth_redirect = oauth.auth0.authorize_redirect(
-        redirect_uri=url_for("callback", _external=True),
+        redirect_uri=url_for("callback", _external=True, _scheme='http' if is_local else 'https'),
+        #redirect_uri=f"https://{env.get("AUTH0_DOMAIN")}/callback",
         audience=env.get("AUTH0_AUDIENCE"),
         response_type="code",
         scope="offline_access openid profile email"
