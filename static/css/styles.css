@@ -2,10 +2,16 @@ body {
   font-family: Arial, sans-serif;
   display: flex;
   justify-content: center;
-  align-items: center;
+  /*align-items: center;*/
   height: 100vh;
   margin: 0;
   background-color: #f4f4f9;
+  align-items: flex-start;
+  flex-direction: column;
+}
+
+:root {
+  --banner-height: 80px;
 }
 
 .banner {
@@ -20,7 +26,7 @@ body {
   left: 0;
   right: 0;
   z-index: 1000;
-  height: 80px;
+  height: var(--banner-height);
 }
 
 .login-btn {
@@ -159,10 +165,11 @@ table.logo td.t{
   margin: 10px 0;
 }
 
-/* Optional wrapper for centering content */
+/* wrapper for centering content */
 .container {
   max-width: auto;
   margin: 0 auto;
+  margin-top: calc(var(--banner-height) + 20px); 
 }
 /* Flex container for the main content */
 .main-content {
