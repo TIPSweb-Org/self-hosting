@@ -3,60 +3,6 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
-    <style>
-      /* Flex container for the main content */
-      .main-content {
-        display: flex;
-        justify-content: space-between;
-        align-items: flex-start;
-        flex-wrap: wrap;
-        padding: 20px;
-      }
-      /* Card and photo sections */
-      .card, .photo {
-        flex: 1 1 45%; /* Grow, shrink and base width */
-        padding: 20px;
-        box-sizing: border-box;
-      }
-      .card {
-        background-color: #f9f9f9;
-        border-radius: 8px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-      }
-      .photo img {
-        max-width: 100%;
-        height: auto;
-        border-radius: 8px;
-        display: block;
-        margin: 0 auto;
-      }
-      /* Responsive adjustments */
-      @media (max-width: 768px) {
-        .main-content {
-          flex-direction: column;
-        }
-        .card, .photo {
-          flex: 1 1 100%;
-        }
-      }
-      /* Begin button styling */
-      .begin-button-container {
-        text-align: center;
-        margin-top: 20px;
-      }
-      .begin-button-container button {
-        background-color: #007BFF;
-        color: #fff;
-        border: none;
-        border-radius: 4px;
-        padding: 10px 20px;
-        font-size: 16px;
-        cursor: pointer;
-      }
-      .begin-button-container button:hover {
-        background-color: #0056b3;
-      }
-    </style>
   </head>
   <body>
     <div class="banner">
@@ -123,23 +69,27 @@
     </div>
 
     <!-- Main content section with a card and a photo -->
-    <div class="main-content">
-      <div class="card">
-        <h2>Toolkit for Illustration of Procedures in Surgery (TIPS)</h2>
-        <p><strong>Overview:</strong> TIPS is a collaborative partnership between surgeons and IT researchers from the Dept. of CISE and Dept. of Surgery. The project aims to create a low-cost, computer-based, 3D interactive multimedia authoring and learning environment – complete with force feedback – that places the specialist surgeon at the center of content creation. This innovative tool is designed for publishing, documenting, teaching, and even legal documentation of surgical procedures.</p>
-        <p><strong>Key People:</strong> Dr. Jörg Peters, Minho Kim, Sukitti Punak, Tianyun Ni, Young In Yeo, Ashish Myles, Dr. Juan Cendan, Sergei N. Kurenov</p>
-        <p><strong>Contact:</strong> Dr. Jörg Peters (<a href="mailto:jorg@cise.ufl.edu">jorg@cise.ufl.edu</a>)</p>
-        <p><strong>Research Sponsor:</strong> NIH, UF Seed Fund, SurfLab</p>
-        <p><strong>Website:</strong> <a href="http://www.cise.ufl.edu/research/SurfLab/TIPS/">TIPS Project Page</a></p>
-        <p><strong>Evaluation:</strong> Evaluation and Validation flow chart (Oct. 30, 2007)</p>
-        <p><strong>Originality:</strong> Unlike existing commercial surgical training tools that focus on fixed tasks like suturing, TIPS empowers specialist surgeons to author and illustrate complex procedures, opening a new channel for communication and education.</p>
+    <div class="container">
+      <!-- Main content section with a card and a photo -->
+      <div class="main-content">
+        <div class="card">
+          <h2>Toolkit for Illustration of Procedures in Surgery (TIPS)</h2>
+          <p><strong>Overview:</strong> TIPS is a new collaborative partnership of surgeons and IT researchers leveraging low-cost hardware and advanced software. Such illustrations are needed for publishing, documenting, teaching, instruction and continuing education outreach and for legal proceedings involving medical documentation.</p>
+          <p><strong>Key People:</strong> Dr. Jörg Peters, Minho Kim, Sukitti Punak, Tianyun Ni, Young In Yeo, Ashish Myles, Dr. Juan Cendan, Sergei N. Kurenov</p>
+          <p><strong>Contact:</strong> Dr. Jörg Peters (<a href="mailto:jorg@cise.ufl.edu">jorg@cise.ufl.edu</a>)</p>
+          <p><strong>Our Goal:</strong> Creating and broadly disseminating a low-cost, computer-based, 3D interactive multimedia authoring and learning environment including force feedback for communication of surgical procedures - that places the specialist in control and at the center of content creation.</p>
+          <p><strong>Website:</strong> <a href="http://www.cise.ufl.edu/research/SurfLab/TIPS/">TIPS Project Page</a></p>
+          <p><strong>Originality:</strong> Unlike existing commercial surgical training tools that focus on fixed tasks like suturing, TIPS empowers specialist surgeons to author and illustrate complex procedures, opening a new channel for communication and education.</p>
+        </div>
+        <div class="photo">
+          <img src="{{ url_for('static', filename='images/surgery_sample.jpg') }}" alt="TIPS Project Image">
+        </div>
       </div>
-      <div class="photo">
-        <img src="{{ url_for('static', filename='images/surgery_sample.jpg') }}" alt="Photo of TIPS">
+      
+      <!-- Begin Button placed underneath the main content -->
+      <div class="begin-button-container">
+        <button type="button">Begin</button>
       </div>
-    </div>
-    <div class="begin-button-container">
-      <button type="button">Begin</button>
     </div>
   </body>
 </html>
