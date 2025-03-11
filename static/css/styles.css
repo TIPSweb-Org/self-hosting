@@ -214,7 +214,7 @@ table.logo td.t{
   text-align: center;
   margin: 10px 0;
   clear: both;
-}
+} 
 .begin-button-container button {
   background-color: #007BFF;
   color: #fff;
@@ -225,5 +225,5 @@ table.logo td.t{
   cursor: pointer;
 }
 .begin-button-container button:hover {
-  background-color: #0056b3;
+  background-color: #017607af;
 }
