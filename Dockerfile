@@ -6,7 +6,9 @@ WORKDIR /home/app
 COPY requirements.txt /home/app
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY . /home/app
+COPY server.py /home/app/
+COPY static/ /home/app/static/
+COPY Frontend/ /home/app/Frontend/
 
 EXPOSE 3000
 
