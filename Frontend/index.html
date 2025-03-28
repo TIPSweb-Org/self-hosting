@@ -1,5 +1,7 @@
-<html>
+<!DOCTYPE html>
+<html lang="en" xml:lang="en">
   <head>
+    <title>TIPSWeb</title>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
@@ -7,7 +9,7 @@
   <body>
     <div class="banner">
       <h1>
-        <table align="center" class="logo">
+        <table class="logo" role="none">
           <tbody>
             <tr>
               <td class="f">&nbsp;</td><td class="f">&nbsp;</td><td class="f">&nbsp;</td>
@@ -82,7 +84,7 @@
           <p><strong>Originality:</strong> Unlike existing commercial surgical training tools that focus on fixed tasks like suturing, TIPS empowers specialist surgeons to author and illustrate complex procedures, opening a new channel for communication and education.</p>
         </div>
         <div class="photo">
-          <img src="{{ url_for('static', filename='images/surgery_sample.jpg') }}" alt="TIPS Project Image">
+          <img src="{{ url_for('static', filename='images/surgery_sample.jpg') }}" alt="TIPS Project Sample">
         </div>
       </div>
       
