@@ -4,6 +4,6 @@ document.addEventListener('DOMContentLoaded', function() {
     beginButton.addEventListener('click', function() {
       // Using a relative URL for security (prevents open redirect vulnerabilities)
       // This will be replaced with the actual GKE deployment URL when available
-      window.location.href = '/gke-application';
+      window.location.href = '/gke-app';
     });
   });
