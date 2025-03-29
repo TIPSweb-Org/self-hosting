@@ -68,7 +68,7 @@ def validate_token(token):
         )
         logging.info("Token validated successfully.")
         return token_payload
-    except (ExpiredSignatureError, JWTError, JWSError, JWTClaimsError) as error:
+    except ( JWTError, JWSError) as error:
         logging.error(f"Token validation error: {error}")
         return None
 
@@ -89,7 +89,7 @@ def requires_admin(f):
 
 ## Initialize Flask App
 app = Flask(__name__, template_folder='Frontend')
-CORS(app, resources={r"/*": {"origins": [f"https://{env.get('AUTH0_DOMAIN')}", "https://dev-ham70vsz2hjzbwgm.us.auth0.com","https://tipsweb.me","https://tips-173404681190.us-central1.run.app", "http://localhost:3000", "https://tips-lrebn2rkuq-uc.a.run.app"]}},
+CORS(app, resources={r"/*": {"origins": [f"https://{env.get('AUTH0_DOMAIN')}", "https://dev-ham70vsz2hjzbwgm.us.auth0.com","https://tipsweb.me","https://tips-173404681190.us-central1.run.app", "https://tipsweb-173404681190.us-central1.run.app", "http://localhost:3000", "https://tips-lrebn2rkuq-uc.a.run.app", "https://tipsweb-lrebn2rkuq-uc.a.run.app"]}},
      supports_credentials=True, allow_headers=["Authorization", "Content-Type"])
 
 app.secret_key = env.get("APP_SECRET_KEY")
@@ -140,8 +140,7 @@ def login():
         response_type="code",
         scope="offline_access openid profile email"
     )
-    #auth_url = f"https://{env.get("AUTH0_DOMAIN")}/authorize?{auth_redirect.location.split('?')[1]}"
-    return auth_redirect #redirect(auth_url) 
+    return auth_redirect 
 
 @app.route("/callback", methods=["GET", "POST"])
 def callback():
@@ -217,6 +216,12 @@ def admin_dashboard():
 @app.route('/admin/delete-user/<user_id>', methods=['DELETE'])
 @requires_admin
 def delete_user(user_id):
+    ##added to protect against vulneribility
+    import re
+    if not re.match(r'^[a-zA-Z0-9_-]+$', user_id):
+        return jsonify({"status": "error", "message": "Invalid user ID format"}), 400
+    ##
+
     payload = {
         "client_id": env.get("M2M_CLIENT_ID"),
         "client_secret": env.get("M2M_CLIENT_SECRET"),
@@ -232,11 +237,19 @@ def delete_user(user_id):
     token = token_response.json()
     
     headers = {'Authorization': f'Bearer {token["access_token"]}'}
+    # delete_response = requests.delete(
+    #     f'https://{env.get("M2M_DOMAIN")}/api/v2/users/{user_id}',
+    #     headers=headers
+    # )
+
+    ##Avoiding URL construction from user data
+    base_url = f'https://{env.get("M2M_DOMAIN")}/api/v2/users/'
     delete_response = requests.delete(
-        f'https://{env.get("M2M_DOMAIN")}/api/v2/users/{user_id}',
+        base_url + user_id,
         headers=headers
     )
-    
+    ##
+
     return jsonify({"status": "success" if delete_response.ok else "error"})
 
 
