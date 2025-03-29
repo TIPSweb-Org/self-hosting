@@ -1,3 +1,6 @@
+<!-- TODO: make separate html for banner so i can access the banner across different pages
+    TODO: can only begin if logged in
+-->
 <!DOCTYPE html>
 <html lang="en" xml:lang="en">
   <head>
@@ -42,14 +45,7 @@
     </style>
   </head>
   <body>
-    <div class="banner">
-      <h1>TIPSWeb</h1>
-      {% if session %}
-          <a href="/logout" class="login-btn">Logout</a>
-      {% else %}
-          <a href="/login" class="login-btn">Login</a>
-      {% endif %}
-    </div>
+    {% include 'banner.html' %}
 
     <div class="gke-container">
       <div class="gke-content">
