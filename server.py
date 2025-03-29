@@ -134,6 +134,11 @@ def index():
 
 @app.route("/login")
 def login():
+    ##for gke app if user not logged in
+    return_to = request.args.get('return_to')
+    if return_to:
+        session['return_to'] = return_to
+
     auth_redirect = oauth.auth0.authorize_redirect(
         redirect_uri=url_for("callback", _external=True, _scheme='http' if is_local else 'https'),
         audience=env.get("AUTH0_AUDIENCE"),
@@ -154,7 +159,14 @@ def callback():
             "permissions": token_payload.get("permissions", [])
         }
 
-        return redirect("/")
+        return_to = session.pop('return_to', None)
+    
+        # If return_to exists, redirect there; otherwise go to home page
+        if return_to:
+            return redirect(return_to)
+        else:
+            return redirect('/')
+        #return redirect("/")
     except requests.exceptions.HTTPError as http_err:
         logging.error(f"HTTP error during token exchange: {http_err}")
         return str(http_err), 401
@@ -186,6 +198,10 @@ def logout():
 def gke_app():
     # This is a placeholder route that will eventually redirect to the GKE deployment
     # For now, it shows a message indicating the GKE deployment is coming soon
+    if not session.get('user'):
+        # Redirect to login page with a return_to parameter
+        return redirect(url_for('login', return_to='/gke-app'))
+      
     gke_url = "https://media.istockphoto.com/id/1418210562/photo/brazil-wildlife-capybara-hydrochoerus-hydrochaeris-biggest-mouse-near-the-water-with-evening.jpg?s=1024x1024&w=is&k=20&c=AzD8FahPVht7LfDs1WT5snMDHHi1pMvH7lnsgmzgfpA="
     return render_template('gke-app.html', gke_url=gke_url)
 
