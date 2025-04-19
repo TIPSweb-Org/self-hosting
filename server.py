@@ -137,6 +137,11 @@ def index():
 
 @app.route("/login")
 def login():
+    ##for gke app if user not logged in
+    return_to = request.args.get('return_to')
+    if return_to:
+        session['return_to'] = return_to
+
     auth_redirect = oauth.auth0.authorize_redirect(
         redirect_uri=url_for("callback", _external=True, _scheme='http' if is_local else 'https'),
         audience=env.get("AUTH0_AUDIENCE"),
@@ -157,7 +162,14 @@ def callback():
             "permissions": token_payload.get("permissions", [])
         }
 
-        return redirect("/")
+        return_to = session.pop('return_to', None)
+    
+        # If return_to exists, redirect there; otherwise go to home page
+        if return_to:
+            return redirect(return_to)
+        else:
+            return redirect('/')
+        #return redirect("/")
     except requests.exceptions.HTTPError as http_err:
         logging.error(f"HTTP error during token exchange: {http_err}")
         return str(http_err), 401
@@ -184,6 +196,7 @@ def logout():
     )
     logging.info(f"Redirecting to logout URL: {logout_url}")
     return redirect(logout_url)
+
 
 @app.route("/start_session", methods=["POST"])
 def start_session():
@@ -273,6 +286,7 @@ def delete_user(user_id):
     ##added to protect against vulneribility
     import re
     if not re.match(r'^[a-zA-Z0-9|_-]+$', user_id):
+
         return jsonify({"status": "error", "message": "Invalid user ID format"}), 400
     ##
 
@@ -303,7 +317,7 @@ def delete_user(user_id):
         headers=headers
     )
     ##
-    
+
     return jsonify({"status": "success" if delete_response.ok else "error"})
 
 

@@ -1,3 +1,4 @@
+
 document.addEventListener("DOMContentLoaded", function () {
   const beginButton = document.getElementById("begin-button");
 
@@ -7,3 +8,4 @@ document.addEventListener("DOMContentLoaded", function () {
     window.location.href = "/start_session";
   });
 });
+
