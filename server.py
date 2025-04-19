@@ -6,6 +6,8 @@ from typing import Annotated, Tuple, Union
 from urllib.parse import quote_plus, urlencode
 from urllib.request import urlopen
 
+from sessionmanager import SessionManager, Session
+
 from authlib.integrations.flask_client import OAuth
 import flask
 import requests
@@ -122,6 +124,7 @@ oauth.register(
     token_endpoint=f'https://{env.get("AUTH0_DOMAIN")}/oauth/token'
 )
 
+
 # Routes
 @app.route("/")
 def index():
@@ -194,17 +197,57 @@ def logout():
     logging.info(f"Redirecting to logout URL: {logout_url}")
     return redirect(logout_url)
 
-@app.route('/gke-app')
-def gke_app():
-    # This is a placeholder route that will eventually redirect to the GKE deployment
-    # For now, it shows a message indicating the GKE deployment is coming soon
-    if not session.get('user'):
-        # Redirect to login page with a return_to parameter
-        return redirect(url_for('login', return_to='/gke-app'))
-      
-    gke_url = "https://media.istockphoto.com/id/1418210562/photo/brazil-wildlife-capybara-hydrochoerus-hydrochaeris-biggest-mouse-near-the-water-with-evening.jpg?s=1024x1024&w=is&k=20&c=AzD8FahPVht7LfDs1WT5snMDHHi1pMvH7lnsgmzgfpA="
-    return render_template('gke-app.html', gke_url=gke_url)
 
+@app.route("/start_session", methods=["POST"])
+def start_session():
+    user = session.get("user")
+    if not user:
+        return jsonify({"error": "User not logged in"}), 401
+    
+    user_id = user["sub"]  # or "email" if you're using that as ID
+
+    # You can dynamically assign or simulate docker_id/ports here
+    docker_id = "dummy_docker_id"  # Replace with actual logic
+    port = 5001
+    control_port = 6001
+
+    try:
+        sess = session_manager.start_session(user_id, docker_id, port, control_port)
+        return jsonify(sess.to_dict())
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+
+@app.route("/get_session", methods=["GET"])
+def get_session():
+    user = session.get("user")
+    if not user:
+        return jsonify({"error": "User not logged in"}), 401
+    
+    user_id = user["sub"]
+    sess = session_manager.get_session(user_id)
+    if not sess:
+        return jsonify({"error": "No session found"}), 404
+    return jsonify(sess.to_dict())
+
+@app.route("/delete_session", methods=["DELETE"])
+def delete_session():
+    user = session.get("user")
+    if not user:
+        return jsonify({"error": "User not logged in"}), 401
+
+    user_id = user["sub"]
+    success = session_manager.delete_session(user_id)
+    if success:
+        return jsonify({"status": "Session deleted"})
+    return jsonify({"error": "No session to delete"}), 404
+
+
+    user_id = user["sub"]
+    if user_id in user_sessions:
+        del user_sessions[user_id]
+        return jsonify({"message": "Session deleted"})
+    else:
+        return jsonify({"message": "No session found"})
 
 @app.route('/admin')
 @requires_admin
@@ -242,7 +285,8 @@ def admin_dashboard():
 def delete_user(user_id):
     ##added to protect against vulneribility
     import re
-    if not re.match(r'^[a-zA-Z0-9_-]+$', user_id):
+    if not re.match(r'^[a-zA-Z0-9|_-]+$', user_id):
+
         return jsonify({"status": "error", "message": "Invalid user ID format"}), 400
     ##
 
@@ -336,7 +380,6 @@ def auth_info():
         return jsonify(token_payload)
     except Exception as e:
         return jsonify({"error": str(e)}), 400
-
 
 
 if __name__ == "__main__":

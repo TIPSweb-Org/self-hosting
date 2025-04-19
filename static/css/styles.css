@@ -40,6 +40,32 @@ body {
 .login-btn:hover {
   background: silver;
 }
+/* 
+table.logo{
+    height:55px;
+		width:170px;
+		font-size:2px;
+		border-collapse:collapse;
+		table-layout:fixed;
+    margin-left: auto;
+    margin-right: auto;
+
+
+.logo > div {
+  border-right: 1px solid black;
+  border-bottom: 1px solid black;
+  position: relative;
+}
+
+.logo .f {
+  border-spacing:0px;
+  background-color: silver;
+}
+
+table.logo td.t{
+	  border-spacing:0px;
+		background-color:black;
+} */
 
 .logo {
   display: grid;
@@ -64,6 +90,7 @@ body {
   border-spacing:0px;
   background-color: silver;
 }
+
 
 .logo .t {
   border-spacing:0px;
@@ -217,7 +244,7 @@ body {
   text-align: center;
   margin: 10px 0;
   clear: both;
-}
+} 
 .begin-button-container button {
   background-color: #007BFF;
   color: #fff;
@@ -228,5 +255,5 @@ body {
   cursor: pointer;
 }
 .begin-button-container button:hover {
-  background-color: #0056b3;
+  background-color: #017607af;
 }
