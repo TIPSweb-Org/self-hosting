@@ -230,7 +230,7 @@ def logout():
 
 ##Testing user id extraction for comm with session management
 
-# @app.route("/test/user-id")
+@app.route("/test/user-id")
 def test_user_id():
     logging.info("test_user_id endpoint called")
     user_id = get_current_user_id()
