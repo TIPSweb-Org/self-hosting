@@ -231,24 +231,26 @@ def logout():
 ##Testing user id extraction for comm with session management
 
 # @app.route("/test/user-id")
-# def test_user_id():
-#     logging.info("test_user_id endpoint called")
-#     user_id = get_current_user_id()
-#     if user_id:
-#         logging.info(f"test_user_id: Found user_id: {user_id}")
-#         return jsonify({"user_id": user_id})
-#     else:
-#         logging.warning("test_user_id: No user_id found")
-#         return jsonify({"error": "No user ID found"}), 401
+def test_user_id():
+    logging.info("test_user_id endpoint called")
+    user_id = get_current_user_id()
+    if user_id:
+        logging.info(f"test_user_id: Found user_id: {user_id}")
+        return jsonify({"user_id": user_id})
+    else:
+        logging.warning("test_user_id: No user_id found")
+        return jsonify({"error": "No user ID found"}), 401
     
+    
+
 @app.route("/api/start-simulation-session", methods=["POST"])
 def start_simulation_session():
     """Start simulation session by sending user ID to the backend"""
     # get id, use the helper function
-    user_id = get_current_user_id()
-    if not user_id:
-        logging.warning("start_simulation_session: No authenticated user found")
-        return jsonify({"error": "Not authenticated"}), 401
+    # user_id = get_current_user_id()
+    # if not user_id:
+    #     logging.warning("start_simulation_session: No authenticated user found")
+    #     return jsonify({"error": "Not authenticated"}), 401
     
     # Prepare user info with just the user_id
     ##can add more info from user if needed 
@@ -263,7 +265,7 @@ def start_simulation_session():
     
     # Send info to simulation backend
     backend_url = "http://24.250.182.57:42823/start_session"
-    logging.info(f"start_simulation_session: Sending user_id {user_id} to {backend_url}")
+    logging.info(f"start_simulation_session: Sending user_id to {backend_url}") ##{user_id}
     
     try:
         response = requests.post(
