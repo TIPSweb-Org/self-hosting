@@ -241,14 +241,6 @@ def delete_session():
         return jsonify({"status": "Session deleted"})
     return jsonify({"error": "No session to delete"}), 404
 
-
-    user_id = user["sub"]
-    if user_id in user_sessions:
-        del user_sessions[user_id]
-        return jsonify({"message": "Session deleted"})
-    else:
-        return jsonify({"message": "No session found"})
-
 @app.route('/admin')
 @requires_admin
 def admin_dashboard():
