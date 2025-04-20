@@ -256,11 +256,13 @@ def start_simulation_session():
     ##can add more info from user if needed 
     user = session.get("user")
     token_payload = validate_token(user["token"]["access_token"])
-    
+
     user_info = {
-        "user": token_payload.get("email", "")
+        "user": token_payload.get("email")
     }
     
+    print(f"Payload being sent to backend: {user_info}")
+
     # Send info to simulation backend
     backend_url = "http://24.250.182.57:42823/start_session"
     logging.info(f"start_simulation_session: Sending user_id to {backend_url}") ##{user_id}
