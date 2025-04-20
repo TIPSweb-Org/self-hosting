@@ -3,69 +3,14 @@
   <head>
     <title>TIPSWeb</title>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/styles.css') }}"
+    />
   </head>
   <body>
-    <div class="banner">
-      <h1>
-        <div class="logo">
-          <!-- Row 1 -->
-          <div class="f"></div><div class="f"></div><div class="f"></div>
-          <div class="f"></div><div class="f"></div><div class="f"></div>
-          <div class="f"></div><div class="f"></div><div class="f"></div>
-          <div class="f"></div><div class="f"></div><div class="f"></div>
-          <div class="f"></div><div class="f"></div><div class="f"></div>
-          
-          <!-- Row 2 -->
-          <div class="f"></div><div class="t"></div><div class="t"></div>
-          <div class="t"></div><div class="f"></div><div class="t"></div>
-          <div class="f"></div><div class="t"></div><div class="t"></div>
-          <div class="t"></div><div class="f"></div><div class="t"></div>
-          <div class="t"></div><div class="t"></div><div class="f"></div>
-          
-          <!-- Row 3 -->
-          <div class="f"></div><div class="f"></div><div class="t"></div>
-          <div class="f"></div><div class="f"></div><div class="t"></div>
-          <div class="f"></div><div class="t"></div><div class="f"></div>
-          <div class="t"></div><div class="f"></div><div class="t"></div>
-          <div class="f"></div><div class="f"></div><div class="f"></div>
-          
-          <!-- Row 4 -->
-          <div class="f"></div><div class="f"></div><div class="t"></div>
-          <div class="f"></div><div class="f"></div><div class="t"></div>
-          <div class="f"></div><div class="t"></div><div class="t"></div>
-          <div class="t"></div><div class="f"></div><div class="t"></div>
-          <div class="t"></div><div class="t"></div><div class="f"></div>
-          
-          <!-- Row 5 -->
-          <div class="f"></div><div class="f"></div><div class="t"></div>
-          <div class="f"></div><div class="f"></div><div class="t"></div>
-          <div class="f"></div><div class="t"></div><div class="f"></div>
-          <div class="f"></div><div class="f"></div><div class="f"></div>
-          <div class="f"></div><div class="t"></div><div class="f"></div>
-          
-          <!-- Row 6 -->
-          <div class="f"></div><div class="f"></div><div class="t"></div>
-          <div class="f"></div><div class="f"></div><div class="t"></div>
-          <div class="f"></div><div class="t"></div><div class="f"></div>
-          <div class="f"></div><div class="f"></div><div class="t"></div>
-          <div class="t"></div><div class="t"></div><div class="f"></div>
-          
-          <!-- Row 7 -->
-          <div class="f"></div><div class="f"></div><div class="f"></div>
-          <div class="f"></div><div class="f"></div><div class="f"></div>
-          <div class="f"></div><div class="f"></div><div class="f"></div>
-          <div class="f"></div><div class="f"></div><div class="f"></div>
-          <div class="f"></div><div class="f"></div><div class="f"></div>
-        </div>
-      </h1>
-      {% if session %}
-          <a href="/logout" class="login-btn">Logout</a>
-      {% else %}
-          <a href="/login" class="login-btn">Login</a>
-      {% endif %}
-    </div>
+    {% include 'banner.html' %}
 
     <!-- Main content section with a card and a photo -->
     <div class="container">
@@ -73,18 +18,52 @@
       <div class="main-content">
         <div class="card">
           <h2>Toolkit for Illustration of Procedures in Surgery (TIPS)</h2>
-          <p><strong>Overview:</strong> TIPS is a new collaborative partnership of surgeons and IT researchers leveraging low-cost hardware and advanced software. Such illustrations are needed for publishing, documenting, teaching, instruction and continuing education outreach and for legal proceedings involving medical documentation.</p>
-          <p><strong>Key People:</strong> Dr. Jörg Peters, Minho Kim, Sukitti Punak, Tianyun Ni, Young In Yeo, Ashish Myles, Dr. Juan Cendan, Sergei N. Kurenov</p>
-          <p><strong>Contact:</strong> Dr. Jörg Peters (<a href="mailto:jorg@cise.ufl.edu">jorg@cise.ufl.edu</a>)</p>
-          <p><strong>Our Goal:</strong> Creating and broadly disseminating a low-cost, computer-based, 3D interactive multimedia authoring and learning environment including force feedback for communication of surgical procedures - that places the specialist in control and at the center of content creation.</p>
-          <p><strong>Website:</strong> <a href="http://www.cise.ufl.edu/research/SurfLab/TIPS/">TIPS Project Page</a></p>
-          <p><strong>Originality:</strong> Unlike existing commercial surgical training tools that focus on fixed tasks like suturing, TIPS empowers specialist surgeons to author and illustrate complex procedures, opening a new channel for communication and education.</p>
+          <p>
+            <strong>Overview:</strong> TIPS is a new collaborative partnership
+            of surgeons and IT researchers leveraging low-cost hardware and
+            advanced software. Such illustrations are needed for publishing,
+            documenting, teaching, instruction and continuing education outreach
+            and for legal proceedings involving medical documentation.
+          </p>
+          <p>
+            <strong>Key People:</strong> Dr. Jörg Peters, Minho Kim, Sukitti
+            Punak, Tianyun Ni, Young In Yeo, Ashish Myles, Dr. Juan Cendan,
+            Sergei N. Kurenov
+          </p>
+          <p>
+            <strong>Contact:</strong> Dr. Jörg Peters (<a
+              href="mailto:jorg@cise.ufl.edu"
+              >jorg@cise.ufl.edu</a
+            >)
+          </p>
+          <p>
+            <strong>Our Goal:</strong> Creating and broadly disseminating a
+            low-cost, computer-based, 3D interactive multimedia authoring and
+            learning environment including force feedback for communication of
+            surgical procedures - that places the specialist in control and at
+            the center of content creation.
+          </p>
+          <p>
+            <strong>Website:</strong>
+            <a href="http://www.cise.ufl.edu/research/SurfLab/TIPS/"
+              >TIPS Project Page</a
+            >
+          </p>
+          <p>
+            <strong>Originality:</strong> Unlike existing commercial surgical
+            training tools that focus on fixed tasks like suturing, TIPS
+            empowers specialist surgeons to author and illustrate complex
+            procedures, opening a new channel for communication and education.
+          </p>
         </div>
         <div class="photo">
-          <img src="{{ url_for('static', filename='images/surgery_sample.jpg') }}" alt="TIPS Project Sample">
+          <img
+            src="{{ url_for('static', filename='images/surgery_sample.jpg') }}"
+            alt="TIPS Project Sample"
+          />
         </div>
       </div>
-      
+
       <!-- Begin Button placed underneath the main content -->
       <div class="begin-button-container">
         <button type="button" id="begin-button">Begin</button>
@@ -92,6 +71,5 @@
     </div>
 
     <script src="{{ url_for('static', filename='js/app.js') }}"></script>
-
   </body>
 </html>
