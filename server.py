@@ -34,6 +34,9 @@ logging.basicConfig(
     force=True
 )
 
+##Initialize session manager
+session_manager = SessionManager()
+
 ## Load environment variables
 ENV_FILE = find_dotenv()
 if ENV_FILE:
