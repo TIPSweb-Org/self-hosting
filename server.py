@@ -50,6 +50,7 @@ jwks = requests.get(jwks_endpoint).json()["keys"]
 logging.info("Retrieved Auth0 JWKS.")
 
 
+##  helper functions ##
 def find_public_key(kid, provider="auth0"):
     keys = jwks 
     for key in keys:
@@ -91,6 +92,31 @@ def requires_admin(f):
         logging.warning("Unauthorized access attempt to admin area - insufficient permissions.")
         return redirect(url_for("index"))
     return decorated
+
+def get_current_user_id():
+    """Helper function to extract user ID from the current session"""
+    user = session.get("user")
+    if not user:
+        logging.warning("get_current_user_id: No user in session")
+        return None
+    
+    if "token" not in user:
+        logging.warning("get_current_user_id: No token in user session")
+        return None
+    
+    logging.info("get_current_user_id: Attempting to validate token")
+    token_payload = validate_token(user["token"]["access_token"])
+    
+    if not token_payload:
+        logging.warning("get_current_user_id: Token validation failed")
+        return None
+    
+    user_id = token_payload.get("sub")
+    logging.info(f"get_current_user_id: Successfully extracted user_id: {user_id}")
+    return user_id
+
+## 
+
 
 ## Initialize Flask App
 app = Flask(__name__, template_folder='Frontend')
@@ -200,7 +226,20 @@ def logout():
     logging.info(f"Redirecting to logout URL: {logout_url}")
     return redirect(logout_url)
 
+##session management 
 
+@app.route("/test/user-id")
+def test_user_id():
+    logging.info("test_user_id endpoint called")
+    user_id = get_current_user_id()
+    if user_id:
+        logging.info(f"test_user_id: Found user_id: {user_id}")
+        return jsonify({"user_id": user_id})
+    else:
+        logging.warning("test_user_id: No user_id found")
+        return jsonify({"error": "No user ID found"}), 401
+    
+    
 @app.route("/start_session", methods=["POST"])
 def start_session():
     user = session.get("user")
@@ -219,6 +258,11 @@ def start_session():
         return jsonify(sess.to_dict())
     except Exception as e:
         return jsonify({"error": str(e)}), 400
+
+##store user session data
+##user id,  Docker id, Port and co-port
+##start session starts session based on user id spits out docker image
+#launch tips 
 
 @app.route("/get_session", methods=["GET"])
 def get_session():
@@ -243,6 +287,7 @@ def delete_session():
     if success:
         return jsonify({"status": "Session deleted"})
     return jsonify({"error": "No session to delete"}), 404
+
 
 @app.route('/admin')
 @requires_admin
