@@ -122,6 +122,7 @@
             // Optionally process the response from the backend if needed
             const sessionData = await res.json();
             output.textContent = "Session started successfully!";
+            toggleButtons(true); 
             window.open("{{ gke_url }}", "_blank");
           } else {
             const errorData = await res.json();
@@ -134,20 +135,44 @@
       }
 
       async function getSession() {
-        // This functionality isn't in your server.py, so it will likely fail.
-        // You might want to implement a /get_session endpoint in your backend if needed.
-        const res = await fetch("/get_session");
-        const data = await res.json();
-        output.textContent = JSON.stringify(data, null, 2);
+        try {
+          const res = await fetch("/get_session", {
+            method: "GET",
+            credentials: "include",
+            headers: {
+              "Content-Type": "application/json",
+            },
+          });
+          if (res.ok) {
+            const data = await res.json();
+            output.textContent = JSON.stringify(data, null, 2);
+          } else {
+            const errorData = await res.json();
+            output.textContent = "Error retrieving session: " + JSON.stringify(errorData);
+          }
+        } catch (err) {
+          output.textContent = "Error: " + err.message;
+        }
       }
 
       async function deleteSession() {
-        // This functionality isn't in your server.py, so it will likely fail.
-        // You might want to implement a /delete_session endpoint in your backend if needed.
-        const res = await fetch("/delete_session", { method: "POST" });
-        if (res.ok) {
-          output.textContent = "Session deleted.";
-          toggleButtons(false);
+        try {
+          const res = await fetch("/delete_session", {
+            method: "POST",
+            credentials: "include",
+            headers: {
+              "Content-Type": "application/json",
+          },
+          });
+          if (res.ok) {
+            output.textContent = "Session deleted.";
+            toggleButtons(false);
+          } else {
+            const errorData = await res.json();
+            output.textContent = "Error deleting session: " + JSON.stringify(errorData);
+          }
+        } catch (err) {
+          output.textContent = "Error: " + err.message;
         }
       }
 
@@ -168,15 +193,25 @@
       delBtn.addEventListener("click", deleteSession);
 
       // Optional: check session status on load (this will likely need a backend endpoint)
-      // window.addEventListener("DOMContentLoaded", async () => {
-      //   const res = await fetch("/get_session");
-      //   if (res.ok) {
-      //     const data = await res.json();
-      //     if (data && Object.keys(data).length > 0) {
-      //       toggleButtons(true);
-      //     }
-      //   }
-      // });
+      window.addEventListener("DOMContentLoaded", async () => {
+        try {
+          const res = await fetch("/get_session", {
+            method: "GET",
+            credentials: "include",
+            headers: {
+              "Content-Type": "application/json",
+            },
+          });
+          if (res.ok) {
+            const data = await res.json();
+            if (data && Object.keys(data).length > 0) {
+              toggleButtons(true); // Show the buttons if a session exists
+            }
+          } 
+        } catch (err) {
+          console.error("Error checking session status:", err.message);
+        }
+      });
     </script>
   </body>
 </html>

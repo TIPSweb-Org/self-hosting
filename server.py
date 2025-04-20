@@ -260,6 +260,7 @@ def logout():
 ##session management 
 
 ##Testing user id extraction for comm with session management
+##TODO: comment out
 
 @app.route("/test/user-id")
 def test_user_id():
@@ -272,7 +273,12 @@ def test_user_id():
         logging.warning("test_user_id: No user_id found")
         return jsonify({"error": "No user ID found"}), 401
     
-    
+##store user session data
+##user id,  Docker id, Port and co-port
+##start session starts session based on user id spits out docker image
+#launch tips 
+
+##TODO: clean up this function, reduce lines used for user_email json extraction
 
 @app.route("/api/start-simulation-session", methods=["POST"])
 def start_simulation_session():
@@ -290,7 +296,7 @@ def start_simulation_session():
 
     email = token_payload.get("email")
 
-    if not email:
+    if not email: ##TODO: check if this is being entered (probably)
         logging.info("Email not found in token payload, fetching from Auth0")
         email = get_user_email_from_auth0(user_id)
         if not email:
@@ -329,11 +335,65 @@ def start_simulation_session():
         logging.error(f"start_simulation_session: {error_msg}")
         return jsonify({"error": error_msg}), 503
 
-##store user session data
-##user id,  Docker id, Port and co-port
-##start session starts session based on user id spits out docker image
-#launch tips 
 
+@app.route("/get_session", methods=["GET"])
+def get_session():
+    """Retrieve the simulation session for the current user"""
+    user_id = get_current_user_id()
+    if not user_id:
+        logging.warning("get_session: No authenticated user found")
+        return jsonify({"error": "Not authenticated"}), 401
+
+    # Send request to the backend
+    backend_url = "http://24.250.182.57:42823/get_session"
+    try:
+        response = requests.get(
+            backend_url,
+            params={"user": get_user_email_from_auth0(user_id)},  # Send eamil as a query parameter
+            headers={"Content-Type": "application/json"}
+        )
+        if response.status_code == 200:
+            session_data = response.json()
+            logging.info(f"get_session: Retrieved session: {session_data}")
+            return jsonify(session_data)
+        else:
+            error_msg = f"Backend service returned {response.status_code}: {response.text}"
+            logging.error(f"get_session: {error_msg}")
+            return jsonify({"error": error_msg}), response.status_code
+    except requests.RequestException as e:
+        error_msg = f"Failed to connect to backend service: {str(e)}"
+        logging.error(f"get_session: {error_msg}")
+        return jsonify({"error": error_msg}), 503
+
+
+@app.route("/delete_session", methods=["POST"])
+def delete_session():
+    """Delete the simulation session for the current user"""
+    user_id = get_current_user_id()
+    if not user_id:
+        logging.warning("delete_session: No authenticated user found")
+        return jsonify({"error": "Not authenticated"}), 401
+
+    # Send request to the backend
+    backend_url = "http://24.250.182.57:42823/delete_session"
+    try:
+        response = requests.delete(
+            backend_url,
+            json={"user": get_user_email_from_auth0(user_id)},  # Send user_id in the request body
+            headers={"Content-Type": "application/json"}
+        )
+        if response.status_code == 200:
+            logging.info("delete_session: Session deleted successfully")
+            return jsonify({"status": "success"})
+        else:
+            error_msg = f"Backend service returned {response.status_code}: {response.text}"
+            logging.error(f"delete_session: {error_msg}")
+            return jsonify({"error": error_msg}), response.status_code
+    except requests.RequestException as e:
+        error_msg = f"Failed to connect to backend service: {str(e)}"
+        logging.error(f"delete_session: {error_msg}")
+        return jsonify({"error": error_msg}), 503
+    
 
 @app.route('/admin')
 @requires_admin
@@ -370,7 +430,7 @@ def admin_dashboard():
 ## app routing to simulation upon user input
 @app.route('/gke-app')
 def gke_app():
-    ##TODO: rename
+    ##TODO: rename gke_app
     if not session.get('user'):
         # Redirect to login page with a return_to parameter
         return redirect(url_for('login', return_to='/gke-app'))
