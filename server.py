@@ -247,10 +247,10 @@ def test_user_id():
 def start_simulation_session():
     """Start simulation session by sending user ID to the backend"""
     # get id, use the helper function
-    # user_id = get_current_user_id()
-    # if not user_id:
-    #     logging.warning("start_simulation_session: No authenticated user found")
-    #     return jsonify({"error": "Not authenticated"}), 401
+    user_id = get_current_user_id()
+    if not user_id:
+        logging.warning("start_simulation_session: No authenticated user found")
+        return jsonify({"error": "Not authenticated"}), 401
     
     # Prepare user info with just the user_id
     ##can add more info from user if needed 

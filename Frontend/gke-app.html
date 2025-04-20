@@ -112,6 +112,7 @@
         try {
           const res = await fetch("/api/start-simulation-session", {
             method: "POST",
+            credentials: "include",
             headers: {
               "Content-Type": "application/json",
             },
