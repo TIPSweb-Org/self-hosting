@@ -108,6 +108,7 @@
       const delBtn = document.getElementById("deleteSessionBtn");
       const output = document.getElementById("sessionOutput");
 
+      //when launch tips is pressed, start a session and redirect to the Sim URL
       async function startSessionAndRedirect() {
         try {
           const res = await fetch("/api/start-simulation-session", {
@@ -141,8 +142,7 @@
             credentials: "include",
             headers: {
               "Content-Type": "application/json",
-            },
-            body: JSON.stringify({}) 
+            }
           });
           if (res.ok) {
             const data = await res.json();
@@ -177,6 +177,7 @@
         }
       }
 
+      //if simulation session is active, show buttons that can end or get session info
       function toggleButtons(sessionActive) {
         if (sessionActive) {
           launchBtn.style.display = "none";
@@ -193,7 +194,7 @@
       getBtn.addEventListener("click", getSession);
       delBtn.addEventListener("click", deleteSession);
 
-      // Optional: check session status on load (this will likely need a backend endpoint)
+      // checks session status on load (this will likely need a backend endpoint)
       window.addEventListener("DOMContentLoaded", async () => {
         try {
           const res = await fetch("/get_session", {
