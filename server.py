@@ -272,6 +272,17 @@ def admin_dashboard():
     logging.info("Fetched admin users successfully.")
     return render_template('admin-dash.html', users=users_response)
 
+@app.route('/gke-app')
+def gke_app():
+    # This is a placeholder route that will eventually redirect to the GKE deployment
+    # For now, it shows a message indicating the GKE deployment is coming soon
+    if not session.get('user'):
+        # Redirect to login page with a return_to parameter
+        return redirect(url_for('login', return_to='/gke-app'))
+      
+    gke_url = "https://media.istockphoto.com/id/1418210562/photo/brazil-wildlife-capybara-hydrochoerus-hydrochaeris-biggest-mouse-near-the-water-with-evening.jpg?s=1024x1024&w=is&k=20&c=AzD8FahPVht7LfDs1WT5snMDHHi1pMvH7lnsgmzgfpA="
+    return render_template('gke-app.html', gke_url=gke_url)
+
 @app.route('/admin/delete-user/<user_id>', methods=['DELETE'])
 @requires_admin
 def delete_user(user_id):
