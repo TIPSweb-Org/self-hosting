@@ -194,25 +194,25 @@
       delBtn.addEventListener("click", deleteSession);
 
       // Optional: check session status on load (this will likely need a backend endpoint)
-      // window.addEventListener("DOMContentLoaded", async () => {
-      //   try {
-      //     const res = await fetch("/get_session", {
-      //       method: "GET",
-      //       credentials: "include",
-      //       headers: {
-      //         "Content-Type": "application/json",
-      //       },
-      //     });
-      //     if (res.ok) {
-      //       const data = await res.json();
-      //       if (data && Object.keys(data).length > 0) {
-      //         toggleButtons(true); // Show the buttons if a session exists
-      //       }
-      //     } 
-      //   } catch (err) {
-      //     console.error("Error checking session status:", err.message);
-      //   }
-      // });
+      window.addEventListener("DOMContentLoaded", async () => {
+        try {
+          const res = await fetch("/get_session", {
+            method: "GET",
+            credentials: "include",
+            headers: {
+              "Content-Type": "application/json",
+            },
+          });
+          if (res.ok) {
+            const data = await res.json();
+            if (data && Object.keys(data).length > 0) {
+              toggleButtons(true); // Show the buttons if a session exists
+            }
+          } 
+        } catch (err) {
+          console.error("Error checking session status:", err.message);
+        }
+      });
     </script>
   </body>
 </html>

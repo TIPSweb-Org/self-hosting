@@ -238,8 +238,35 @@ def callback():
         logging.error(f"Full error details: {repr(e)}")
         return str(e), 401
 
+##TODO: disregard all error checks/ reduce steps for ending session. 
 @app.route("/logout")
 def logout():
+    """Log out the user, delete the simulation session, and redirect to the logout URL."""
+    logging.info("User logging out, attempting to delete simulation session.")
+
+    # Attempt to delete the simulation session
+    user_id = get_current_user_id()
+    if user_id:
+        try:
+            email = get_user_email_from_auth0(user_id)
+            if email:
+                backend_url = "http://24.250.182.57:42823/delete_session"
+                response = requests.delete(
+                    backend_url,
+                    json={"user": email},  # Send email in the request body
+                    headers={"Content-Type": "application/json"}
+                )
+                if response.status_code == 200:
+                    logging.info("logout: Simulation session deleted successfully.")
+                else:
+                    logging.warning(f"logout: Failed to delete simulation session: {response.text}")
+            else:
+                logging.warning("logout: Failed to retrieve email for session deletion.")
+        except requests.RequestException as e:
+            logging.error(f"logout: Error deleting simulation session: {str(e)}")
+    else:
+        logging.warning("logout: No authenticated user found, skipping session deletion.")
+    
     logging.info("User logging out, clearing session.")
     session.clear()
     logout_url = (
