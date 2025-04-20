@@ -258,9 +258,9 @@ def start_simulation_session():
     token_payload = validate_token(user["token"]["access_token"])
     
     user_info = {
-        #"user_id": user_id,
-        "user": token_payload.get("email", ""),
-        #"name": token_payload.get("name", "")
+        "user": {
+            "email": token_payload.get("email", "")
+        }
     }
     
     # Send info to simulation backend
