@@ -228,65 +228,70 @@ def logout():
 
 ##session management 
 
-@app.route("/test/user-id")
-def test_user_id():
-    logging.info("test_user_id endpoint called")
+##Testing user id extraction for comm with session management
+
+# @app.route("/test/user-id")
+# def test_user_id():
+#     logging.info("test_user_id endpoint called")
+#     user_id = get_current_user_id()
+#     if user_id:
+#         logging.info(f"test_user_id: Found user_id: {user_id}")
+#         return jsonify({"user_id": user_id})
+#     else:
+#         logging.warning("test_user_id: No user_id found")
+#         return jsonify({"error": "No user ID found"}), 401
+    
+@app.route("/api/start-simulation-session", methods=["POST"])
+def start_simulation_session():
+    """Start simulation session by sending user ID to the backend"""
+    # get id, use the helper function
     user_id = get_current_user_id()
-    if user_id:
-        logging.info(f"test_user_id: Found user_id: {user_id}")
-        return jsonify({"user_id": user_id})
-    else:
-        logging.warning("test_user_id: No user_id found")
-        return jsonify({"error": "No user ID found"}), 401
+    if not user_id:
+        logging.warning("start_simulation_session: No authenticated user found")
+        return jsonify({"error": "Not authenticated"}), 401
     
-    
-@app.route("/start_session", methods=["POST"])
-def start_session():
+    # Prepare user info with just the user_id
+    ##can add more info from user if needed 
     user = session.get("user")
-    if not user:
-        return jsonify({"error": "User not logged in"}), 401
+    token_payload = validate_token(user["token"]["access_token"])
     
-    user_id = user["sub"]  # or "email" if you're using that as ID
-
-    # You can dynamically assign or simulate docker_id/ports here
-    docker_id = "dummy_docker_id"  # Replace with actual logic
-    port = 5001
-    control_port = 6001
-
+    user_info = {
+        #"user_id": user_id,
+        "user": token_payload.get("email", ""),
+        #"name": token_payload.get("name", "")
+    }
+    
+    # Send info to simulation backend
+    backend_url = "http://24.250.182.57:42823/start_session"
+    logging.info(f"start_simulation_session: Sending user_id {user_id} to {backend_url}")
+    
     try:
-        sess = session_manager.start_session(user_id, docker_id, port, control_port)
-        return jsonify(sess.to_dict())
-    except Exception as e:
-        return jsonify({"error": str(e)}), 400
+        response = requests.post(
+            backend_url,
+            json=user_info,
+            headers={"Content-Type": "application/json"}
+        )
+        
+        if response.status_code == 200:
+            session_data = response.json()
+            # Store the session info in our session for later use
+            session["simulation_session"] = session_data
+            logging.info(f"start_simulation_session: Successfully started session: {session_data}")
+            return jsonify(session_data)
+        else:
+            error_msg = f"Backend service returned {response.status_code}: {response.text}"
+            logging.error(f"start_simulation_session: {error_msg}")
+            return jsonify({"error": error_msg}), response.status_code
+    
+    except requests.RequestException as e:
+        error_msg = f"Failed to connect to backend service: {str(e)}"
+        logging.error(f"start_simulation_session: {error_msg}")
+        return jsonify({"error": error_msg}), 503
 
 ##store user session data
 ##user id,  Docker id, Port and co-port
 ##start session starts session based on user id spits out docker image
 #launch tips 
-
-@app.route("/get_session", methods=["GET"])
-def get_session():
-    user = session.get("user")
-    if not user:
-        return jsonify({"error": "User not logged in"}), 401
-    
-    user_id = user["sub"]
-    sess = session_manager.get_session(user_id)
-    if not sess:
-        return jsonify({"error": "No session found"}), 404
-    return jsonify(sess.to_dict())
-
-@app.route("/delete_session", methods=["DELETE"])
-def delete_session():
-    user = session.get("user")
-    if not user:
-        return jsonify({"error": "User not logged in"}), 401
-
-    user_id = user["sub"]
-    success = session_manager.delete_session(user_id)
-    if success:
-        return jsonify({"status": "Session deleted"})
-    return jsonify({"error": "No session to delete"}), 404
 
 
 @app.route('/admin')
@@ -320,16 +325,20 @@ def admin_dashboard():
     logging.info("Fetched admin users successfully.")
     return render_template('admin-dash.html', users=users_response)
 
+
+## app routing to simulation upon user input
 @app.route('/gke-app')
 def gke_app():
-    # This is a placeholder route that will eventually redirect to the GKE deployment
-    # For now, it shows a message indicating the GKE deployment is coming soon
+    ##TODO: rename
     if not session.get('user'):
         # Redirect to login page with a return_to parameter
         return redirect(url_for('login', return_to='/gke-app'))
-      
-    gke_url = "https://media.istockphoto.com/id/1418210562/photo/brazil-wildlife-capybara-hydrochoerus-hydrochaeris-biggest-mouse-near-the-water-with-evening.jpg?s=1024x1024&w=is&k=20&c=AzD8FahPVht7LfDs1WT5snMDHHi1pMvH7lnsgmzgfpA="
+
+    gke_url = "http://24.250.182.57:42823/start_session" 
+    #gke_url = "https://media.istockphoto.com/id/1418210562/photo/brazil-wildlife-capybara-hydrochoerus-hydrochaeris-biggest-mouse-near-the-water-with-evening.jpg?s=1024x1024&w=is&k=20&c=AzD8FahPVht7LfDs1WT5snMDHHi1pMvH7lnsgmzgfpA="
     return render_template('gke-app.html', gke_url=gke_url)
+
+
 
 @app.route('/admin/delete-user/<user_id>', methods=['DELETE'])
 @requires_admin

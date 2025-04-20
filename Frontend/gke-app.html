@@ -80,7 +80,6 @@
           </ul>
         </div>
 
-        <!-- Session Buttons -->
         <button id="launchBtn" class="gke-button">Launch TIPS</button>
         <button
           id="getSessionBtn"
@@ -109,41 +108,40 @@
       const delBtn = document.getElementById("deleteSessionBtn");
       const output = document.getElementById("sessionOutput");
 
-      async function startSession() {
+      async function startSessionAndRedirect() {
         try {
-          // Replace this with however you're storing tokens
-          const token = JSON.parse(localStorage.getItem("auth_token")) || {};
-          const res = await fetch("/start_session", {
+          const res = await fetch("/api/start-simulation-session", {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
             },
-            body: JSON.stringify({
-              access_token: token.access_token,
-              id_token: token.id_token,
-            }),
           });
           if (res.ok) {
-            return true;
+            // Optionally process the response from the backend if needed
+            const sessionData = await res.json();
+            output.textContent = "Session started successfully!";
+            window.open("{{ gke_url }}", "_blank");
           } else {
             const errorData = await res.json();
             output.textContent =
               "Failed to start session: " + JSON.stringify(errorData);
-            return false;
           }
         } catch (err) {
           output.textContent = "Error starting session: " + err.message;
-          return false;
         }
       }
 
       async function getSession() {
+        // This functionality isn't in your server.py, so it will likely fail.
+        // You might want to implement a /get_session endpoint in your backend if needed.
         const res = await fetch("/get_session");
         const data = await res.json();
         output.textContent = JSON.stringify(data, null, 2);
       }
 
       async function deleteSession() {
+        // This functionality isn't in your server.py, so it will likely fail.
+        // You might want to implement a /delete_session endpoint in your backend if needed.
         const res = await fetch("/delete_session", { method: "POST" });
         if (res.ok) {
           output.textContent = "Session deleted.";
@@ -163,27 +161,20 @@
         }
       }
 
-      launchBtn.addEventListener("click", async () => {
-        const sessionStarted = await startSession();
-        if (sessionStarted) {
-          toggleButtons(true);
-          window.open("{{ gke_url }}", "_blank");
-        }
-      });
-
+      launchBtn.addEventListener("click", startSessionAndRedirect);
       getBtn.addEventListener("click", getSession);
       delBtn.addEventListener("click", deleteSession);
 
-      // Optional: check session status on load
-      window.addEventListener("DOMContentLoaded", async () => {
-        const res = await fetch("/get_session");
-        if (res.ok) {
-          const data = await res.json();
-          if (data && Object.keys(data).length > 0) {
-            toggleButtons(true);
-          }
-        }
-      });
+      // Optional: check session status on load (this will likely need a backend endpoint)
+      // window.addEventListener("DOMContentLoaded", async () => {
+      //   const res = await fetch("/get_session");
+      //   if (res.ok) {
+      //     const data = await res.json();
+      //     if (data && Object.keys(data).length > 0) {
+      //       toggleButtons(true);
+      //     }
+      //   }
+      // });
     </script>
   </body>
 </html>
