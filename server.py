@@ -115,6 +115,37 @@ def get_current_user_id():
     logging.info(f"get_current_user_id: Successfully extracted user_id: {user_id}")
     return user_id
 
+def get_user_email_from_auth0(user_id):
+    """Retrieve the user's email from Auth0 using the Management API."""
+    payload = {
+        "client_id": env.get("M2M_CLIENT_ID"),
+        "client_secret": env.get("M2M_CLIENT_SECRET"),
+        "audience": f"https://{env.get('M2M_DOMAIN')}/api/v2/",
+        "grant_type": "client_credentials"
+    }
+
+    # Get the M2M token
+    token_response = requests.post(
+        f"https://{env.get('M2M_DOMAIN')}/oauth/token",
+        json=payload
+    )
+    token = token_response.json()
+    if "access_token" not in token:
+        logging.error(f"Error obtaining M2M token: {token.get('error_description')}")
+        return None
+
+    # Query the Auth0 Management API for the user's email
+    headers = {"Authorization": f"Bearer {token['access_token']}"}
+    user_response = requests.get(
+        f'https://{env.get("M2M_DOMAIN")}/api/v2/users/{user_id}',
+        headers=headers
+    )
+    user_data = user_response.json()
+    if "email" not in user_data:
+        logging.error(f"Failed to retrieve email for user_id {user_id}: {user_data}")
+        return None
+
+    return user_data["email"]
 ## 
 
 
@@ -257,10 +288,18 @@ def start_simulation_session():
     user = session.get("user")
     token_payload = validate_token(user["token"]["access_token"])
 
+    email = token_payload.get("email")
+
+    if not email:
+        logging.info("Email not found in token payload, fetching from Auth0")
+        email = get_user_email_from_auth0(user_id)
+        if not email:
+            return jsonify({"error": "Failed to retrieve email"}), 400
+
     user_info = {
-        "user": token_payload.get("email")
+        "user": email
     }
-    
+        
     print(f"Payload being sent to backend: {user_info}")
 
     # Send info to simulation backend
