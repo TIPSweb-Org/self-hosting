@@ -6,7 +6,6 @@ from typing import Annotated, Tuple, Union
 from urllib.parse import quote_plus, urlencode
 from urllib.request import urlopen
 
-from sessionmanager import SessionManager, Session
 
 from authlib.integrations.flask_client import OAuth
 import flask
@@ -33,9 +32,6 @@ logging.basicConfig(
     stream=sys.stdout,
     force=True
 )
-
-##Initialize session manager
-session_manager = SessionManager()
 
 ## Load environment variables
 ENV_FILE = find_dotenv()
@@ -148,6 +144,8 @@ def get_user_email_from_auth0(user_id):
     return user_data["email"]
 
 
+###TODO: make work????
+
 def get_session_port():
     """Call the /get_session function directly and extract the port."""
     # Simulate the user ID retrieval
@@ -170,7 +168,12 @@ def get_session_port():
     else:
         logging.error(f"get_session_port: Failed to retrieve session: {response.get_json()}")
         return None
-        
+
+##eventually implement for better security      
+def get_backend_url(endpoint):
+    """Generate backend URL with the given endpoint."""
+    return f"http://{env.get("BACKEND_HOST")}:{env.get("BACKEND_PORT")}/{endpoint}"
+
 ## 
 
 
