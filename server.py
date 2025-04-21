@@ -41,9 +41,13 @@ if ENV_FILE:
 # Log environment load confirmation (be cautious not to log secrets)
 logging.info("Environment variables loaded.")
 
+##global vars
+
 jwks_endpoint = env.get("JWKS_ENDPOINT")
 jwks = requests.get(jwks_endpoint).json()["keys"]
 logging.info("Retrieved Auth0 JWKS.")
+
+BACKEND_URL = f"http://{env.get('BACKEND_HOST')}:{env.get('BACKEND_PORT')}"
 
 
 ##  helper functions ##
@@ -142,11 +146,6 @@ def get_user_email_from_auth0(user_id):
         return None
 
     return user_data["email"]
-
-##eventually implement for better security      
-def get_backend_url(endpoint):
-    """Generate backend URL with the given endpoint."""
-    return f"http://{env.get("BACKEND_HOST")}:{env.get("BACKEND_PORT")}/{endpoint}"
 
 ## 
 
@@ -252,7 +251,7 @@ def logout():
         try:
             email = get_user_email_from_auth0(user_id)
             if email:
-                backend_url = "http://24.250.182.57:42823/delete_session"
+                backend_url = f"{BACKEND_URL}/delete_session"
                 response = requests.delete(
                     backend_url,
                     json={"user": email},  # Send email in the request body
@@ -291,16 +290,16 @@ def logout():
 ##Testing user id extraction for comm with session management
 ##TODO: comment out
 
-@app.route("/test/user-id")
-def test_user_id():
-    logging.info("test_user_id endpoint called")
-    user_id = get_current_user_id()
-    if user_id:
-        logging.info(f"test_user_id: Found user_id: {user_id}")
-        return jsonify({"user_id": user_id})
-    else:
-        logging.warning("test_user_id: No user_id found")
-        return jsonify({"error": "No user ID found"}), 401
+# @app.route("/test/user-id")
+# def test_user_id():
+#     logging.info("test_user_id endpoint called")
+#     user_id = get_current_user_id()
+#     if user_id:
+#         logging.info(f"test_user_id: Found user_id: {user_id}")
+#         return jsonify({"user_id": user_id})
+#     else:
+#         logging.warning("test_user_id: No user_id found")
+#         return jsonify({"error": "No user ID found"}), 401
     
 ##store user session data
 ##user id,  Docker id, Port and co-port
@@ -342,7 +341,7 @@ def start_simulation_session():
     # if not port:
     #     return jsonify({"error": "Failed to retrieve session port"}), 400
     
-    backend_url = f"http://24.250.182.57:42823/start_session"
+    backend_url = f"{BACKEND_URL}/start_session"
     logging.info(f"start_simulation_session: Sending user_id to {backend_url}") ##{user_id}
     
     try:
@@ -378,7 +377,7 @@ def get_session():
         return jsonify({"error": "Not authenticated"}), 401
 
     # Send request to the backend
-    backend_url = "http://24.250.182.57:42823/get_session"
+    backend_url = "{BACKEND_URL}/get_session"
     try:
         response = requests.get(
             backend_url,
@@ -410,7 +409,7 @@ def delete_session():
         return jsonify({"error": "Not authenticated"}), 401
 
     # Send request to the backend
-    backend_url = "http://24.250.182.57:42823/delete_session"
+    backend_url = "{BACKEND_URL}/delete_session"
     try:
         response = requests.delete(
             backend_url,
@@ -440,19 +439,7 @@ def launch_app():
         # Redirect to login page with a return_to parameter
         return redirect(url_for('login', return_to='/launch-app'))
 
-    simulation_session = session.get("simulation_session")
-
-    if simulation_session and "port" in simulation_session:
-        # Extract the port from the simulation session data
-        port = simulation_session["port"]
-        launch_url = f"http://24.250.182.57:{port}"
-        logging.info(f"simulation served at {launch_url}") 
-    else:
-        #show capoybarar if for some reason port not accessible
-        logging.info("port not found")
-        launch_url = "https://media.istockphoto.com/id/1418210562/photo/brazil-wildlife-capybara-hydrochoerus-hydrochaeris-biggest-mouse-near-the-water-with-evening.jpg?s=1024x1024&w=is&k=20&c=AzD8FahPVht7LfDs1WT5snMDHHi1pMvH7lnsgmzgfpA="
-    
-    return render_template('launch-app.html', launch_url=launch_url)
+    return render_template('launch-app.html')
 
 
 @app.route('/admin')

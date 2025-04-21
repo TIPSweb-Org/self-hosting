@@ -3,10 +3,17 @@
 from flask import Flask, request, session, jsonify
 import random
 import docker
-import os
+from dotenv import find_dotenv, load_dotenv
+import os 
+from os import environ as env
+
+
+ENV_FILE = find_dotenv()
+if ENV_FILE:
+    load_dotenv(ENV_FILE)
 
 app = Flask(__name__)
-app.secret_key = "super-secret-key"  # Replace with a secure value
+app.secret_key = env.get("APP_SECRET_KEY")  # same as server.py, im ps this is how it should b?
 app.config["SESSION_TYPE"] = "filesystem"
 
 
