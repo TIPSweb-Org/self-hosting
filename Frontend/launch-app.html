@@ -86,7 +86,7 @@
           class="secondary-button"
           style="display: none"
         >
-          Open Simulation
+          Open Session
         </button>
         <button
           id="deleteSessionBtn"
@@ -124,6 +124,7 @@
             var sessionData = await res.json();
             //TODO: change with username and password
             output.textContent = "Session started successfully.";
+            output.textContent += "Username: ubuntu \nPassword: mypasswrd"
             toggleButtons(true); 
           } else {
             const errorData = await res.json();
