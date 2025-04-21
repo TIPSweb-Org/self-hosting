@@ -9,19 +9,19 @@
       href="{{ url_for('static', filename='css/styles.css') }}"
     />
     <style>
-      .gke-container {
+      .launch-container {
         text-align: center;
         padding: 50px 20px;
         max-width: 800px;
         margin: 0 auto;
       }
-      .gke-content {
+      .launch-content {
         background-color: #f8f9fa;
         border-radius: 8px;
         padding: 30px;
         box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
       }
-      .gke-button,
+      .launch-button,
       .secondary-button {
         margin-top: 20px;
         display: inline-block;
@@ -34,7 +34,7 @@
         transition: background-color 0.3s;
         cursor: pointer;
       }
-      .gke-button:hover,
+      .launch-button:hover,
       .secondary-button:hover {
         background-color: #3367d6;
       }
@@ -59,28 +59,28 @@
   <body>
     {% include 'banner.html' %}
 
-    <div class="gke-container">
-      <div class="gke-content">
+    <div class="launch-container">
+      <div class="launch-content">
         <h2>TIPS Surgical Procedure Toolkit</h2>
         <p>
           You are about to access the TIPS interactive surgical procedure
-          toolkit hosted on Google Kubernetes Engine.
+          toolkit hosted on the Selkies streaming platform.
         </p>
         <p>
           This application provides advanced 3D visualization and interactive
-          tools for surgical education and training.
+          tools for laparoscopic surgical education and training.
         </p>
 
         <div class="instructions">
           <h3>What to expect:</h3>
           <ul style="text-align: left">
-            <li>Interactive 3D models of surgical procedures</li>
-            <li>Step-by-step guides for various surgical techniques</li>
+            <li>Interactive 3D models of procedures</li>
+            <li>Step-by-step guides for various techniques</li>
             <li>Educational resources for medical professionals</li>
           </ul>
         </div>
 
-        <button id="launchBtn" class="gke-button">Launch TIPS</button>
+        <button id="launchBtn" class="launch-button">Launch TIPS</button>
         <button
           id="getSessionBtn"
           class="secondary-button"
@@ -124,7 +124,7 @@
             const sessionData = await res.json();
             output.textContent = "Session started successfully!";
             toggleButtons(true); 
-            window.open("{{ gke_url }}", "_blank");
+            window.open("{{ launch_url }}", "_blank");
           } else {
             const errorData = await res.json();
             output.textContent =

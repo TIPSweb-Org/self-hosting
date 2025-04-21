@@ -197,7 +197,7 @@ def index():
 
 @app.route("/login")
 def login():
-    ##for gke app if user not logged in
+    ##for launch  app if user not logged in
     return_to = request.args.get('return_to')
     if return_to:
         session['return_to'] = return_to
@@ -455,16 +455,15 @@ def admin_dashboard():
 
 
 ## app routing to simulation upon user input
-@app.route('/gke-app')
-def gke_app():
-    ##TODO: rename gke_app
+@app.route('/launch-app')
+def launch_app():
     if not session.get('user'):
         # Redirect to login page with a return_to parameter
-        return redirect(url_for('login', return_to='/gke-app'))
+        return redirect(url_for('login', return_to='/launch-app'))
 
-    gke_url = "http://24.250.182.57:42823/start_session" 
-    #gke_url = "https://media.istockphoto.com/id/1418210562/photo/brazil-wildlife-capybara-hydrochoerus-hydrochaeris-biggest-mouse-near-the-water-with-evening.jpg?s=1024x1024&w=is&k=20&c=AzD8FahPVht7LfDs1WT5snMDHHi1pMvH7lnsgmzgfpA="
-    return render_template('gke-app.html', gke_url=gke_url)
+    launch_url = "http://24.250.182.57:42823/start_session" 
+    #launch_url = "https://media.istockphoto.com/id/1418210562/photo/brazil-wildlife-capybara-hydrochoerus-hydrochaeris-biggest-mouse-near-the-water-with-evening.jpg?s=1024x1024&w=is&k=20&c=AzD8FahPVht7LfDs1WT5snMDHHi1pMvH7lnsgmzgfpA="
+    return render_template('launch-app.html', launch_url=launch_url)
 
 
 
