@@ -257,3 +257,11 @@ table.logo td.t{
 .begin-button-container button:hover {
   background-color: #017607af;
 }
+
+.back-link {
+  margin-top: 20px;
+  display: inline-block;
+  padding: 10px 20px;
+  color: #4285f4;
+  text-decoration: none;
+}
