@@ -89,6 +89,7 @@ session_manager = SessionManager(max_sessions)
 def start_session():
 
     data = request.get_json(silent=True) or {}
+    print(data)
     user = data.get("user")
     
     if not user:
@@ -105,7 +106,9 @@ def start_session():
 def get_session_route():
     
     data = request.get_json(silent=True) or {}
+    print(data)
     user = data.get("user")
+    
     
     if not user:
         return jsonify({"error": "User not logged in"}), 401
@@ -120,6 +123,7 @@ def get_session_route():
 def delete_session_route():
     
     data = request.get_json(silent=True) or {}
+    print(data)
     user = data.get("user")
     
     if not user:
