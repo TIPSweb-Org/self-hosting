@@ -23,7 +23,7 @@ from jose.exceptions import JWTClaimsError
 import werkzeug
 
 # from werkzeug.middleware.proxy_fix import ProxyFix
-###TODO: change aut0 from single page app to regular web app
+###TODO: change auth0 from single page app to regular web app
 ##TODO: back button for admin dashboard
 
 logging.basicConfig(
@@ -149,7 +149,6 @@ def get_user_email_from_auth0(user_id):
 
 ## 
 
-
 ## Initialize Flask App
 app = Flask(__name__, template_folder='Frontend')
 CORS(app, resources={r"/*": {"origins": [f"https://{env.get('AUTH0_DOMAIN')}", "https://dev-ham70vsz2hjzbwgm.us.auth0.com","https://tipsweb.me","https://tips-173404681190.us-central1.run.app", "https://tipsweb-173404681190.us-central1.run.app", "http://localhost:3000", "https://tips-lrebn2rkuq-uc.a.run.app", "https://tipsweb-lrebn2rkuq-uc.a.run.app"]}},
@@ -157,6 +156,7 @@ CORS(app, resources={r"/*": {"origins": [f"https://{env.get('AUTH0_DOMAIN')}", "
 
 app.secret_key = env.get("APP_SECRET_KEY")
 is_local = env.get('FLASK_ENV') == 'development'
+
 # Uncomment and configure ProxyFix if needed
 # app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
 
@@ -377,7 +377,7 @@ def get_session():
         return jsonify({"error": "Not authenticated"}), 401
 
     # Send request to the backend
-    backend_url = "{BACKEND_URL}/get_session"
+    backend_url = f"{BACKEND_URL}/get_session"
     try:
         response = requests.get(
             backend_url,
@@ -409,7 +409,7 @@ def delete_session():
         return jsonify({"error": "Not authenticated"}), 401
 
     # Send request to the backend
-    backend_url = "{BACKEND_URL}/delete_session"
+    backend_url = f"{BACKEND_URL}/delete_session"
     try:
         response = requests.delete(
             backend_url,
