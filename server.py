@@ -149,21 +149,27 @@ def get_user_email_from_auth0(user_id):
 
 
 def get_session_port():
-    """Call the /get_session route internally and extract the port."""
-    with current_app.test_client() as client:
-        response = client.get("/get_session")
-        if response.status_code == 200:
-            session_data = response.get_json()
-            port = session_data.get("port")
-            if port:
-                logging.info(f"get_session_port: Retrieved port: {port}")
-                return port
-            else:
-                logging.error("get_session_port: Port not found in session data")
-                return None
+    """Call the /get_session function directly and extract the port."""
+    # Simulate the user ID retrieval
+    user_id = get_current_user_id()
+    if not user_id:
+        logging.warning("get_session_port: No authenticated user found")
+        return None
+
+    # Call the /get_session function directly
+    response = get_session()
+    if response.status_code == 200:
+        session_data = response.get_json()
+        port = session_data.get("port")
+        if port:
+            logging.info(f"get_session_port: Retrieved port: {port}")
+            return port
         else:
-            logging.error(f"get_session_port: Failed to retrieve session: {response.get_json()}")
+            logging.error("get_session_port: Port not found in session data")
             return None
+    else:
+        logging.error(f"get_session_port: Failed to retrieve session: {response.get_json()}")
+        return None
         
 ## 
 
