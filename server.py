@@ -465,10 +465,16 @@ def launch_app():
     # port = get_session_port()
     # if not port:
     #     return jsonify({"error": "Failed to retrieve session port"}), 400
+    simulation_session = session.get("simulation_session")
+
+    if simulation_session and 'port' in simulation_session:
+        # Extract the port from the simulation session data
+        port = simulation_session['port']
+        launch_url = f"http://24.250.182.57:{port}"
+    else:
+        #show capoybarar if for some reason port not accessible
+        launch_url = "https://media.istockphoto.com/id/1418210562/photo/brazil-wildlife-capybara-hydrochoerus-hydrochaeris-biggest-mouse-near-the-water-with-evening.jpg?s=1024x1024&w=is&k=20&c=AzD8FahPVht7LfDs1WT5snMDHHi1pMvH7lnsgmzgfpA="
     
-    #launch_url = f"http://24.250.182.57:{port}/start_session"  
-    launch_url = f"http://24.250.182.57:42823/start_session" 
-    #launch_url = "https://media.istockphoto.com/id/1418210562/photo/brazil-wildlife-capybara-hydrochoerus-hydrochaeris-biggest-mouse-near-the-water-with-evening.jpg?s=1024x1024&w=is&k=20&c=AzD8FahPVht7LfDs1WT5snMDHHi1pMvH7lnsgmzgfpA="
     return render_template('launch-app.html', launch_url=launch_url)
 
 
