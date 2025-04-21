@@ -143,32 +143,6 @@ def get_user_email_from_auth0(user_id):
 
     return user_data["email"]
 
-
-###TODO: make work????
-
-def get_session_port():
-    """Call the /get_session function directly and extract the port."""
-    # Simulate the user ID retrieval
-    user_id = get_current_user_id()
-    if not user_id:
-        logging.warning("get_session_port: No authenticated user found")
-        return None
-
-    # Call the /get_session function directly
-    response =  make_response(get_session())
-    if response.status_code == 200:
-        session_data = response.get_json()
-        port = session_data.get("port")
-        if port:
-            logging.info(f"get_session_port: Retrieved port: {port}")
-            return port
-        else:
-            logging.error("get_session_port: Port not found in session data")
-            return None
-    else:
-        logging.error(f"get_session_port: Failed to retrieve session: {response.get_json()}")
-        return None
-
 ##eventually implement for better security      
 def get_backend_url(endpoint):
     """Generate backend URL with the given endpoint."""
@@ -462,17 +436,16 @@ def launch_app():
         # Redirect to login page with a return_to parameter
         return redirect(url_for('login', return_to='/launch-app'))
 
-    # port = get_session_port()
-    # if not port:
-    #     return jsonify({"error": "Failed to retrieve session port"}), 400
     simulation_session = session.get("simulation_session")
 
-    if simulation_session and 'port' in simulation_session:
+    if simulation_session and "port" in simulation_session:
         # Extract the port from the simulation session data
-        port = simulation_session['port']
+        port = simulation_session["port"]
         launch_url = f"http://24.250.182.57:{port}"
+        logging.info(f"simulation served at {launch_url}") 
     else:
         #show capoybarar if for some reason port not accessible
+        logging.info("port not found")
         launch_url = "https://media.istockphoto.com/id/1418210562/photo/brazil-wildlife-capybara-hydrochoerus-hydrochaeris-biggest-mouse-near-the-water-with-evening.jpg?s=1024x1024&w=is&k=20&c=AzD8FahPVht7LfDs1WT5snMDHHi1pMvH7lnsgmzgfpA="
     
     return render_template('launch-app.html', launch_url=launch_url)
