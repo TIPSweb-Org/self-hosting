@@ -16,6 +16,9 @@ app = Flask(__name__)
 app.secret_key = env.get("APP_SECRET_KEY")  # same as server.py, im ps this is how it should b?
 app.config["SESSION_TYPE"] = "filesystem"
 
+## Global vars ##
+ERROR_NOT_LOGGED_IN = "User not logged in" 
+
 
 class Session:
     def __init__(self, user_id, docker_id, port, control_port):
@@ -100,7 +103,7 @@ def start_session():
     user = data.get("user")
     
     if not user:
-        return jsonify({"error": "User not logged in"}), 401
+        return jsonify({"error": ERROR_NOT_LOGGED_IN}), 401
 
     try:
         sess = session_manager.start_session(user)
@@ -118,7 +121,7 @@ def get_session_route():
     
     
     if not user:
-        return jsonify({"error": "User not logged in"}), 401
+        return jsonify({"error": ERROR_NOT_LOGGED_IN}), 401
 
     sess = session_manager.get_session(user)
     if not sess:
@@ -134,7 +137,7 @@ def delete_session_route():
     user = data.get("user")
     
     if not user:
-        return jsonify({"error": "User not logged in"}), 401
+        return jsonify({"error": ERROR_NOT_LOGGED_IN}), 401
     
     success = session_manager.delete_session(user)
 

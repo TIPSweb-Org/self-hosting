@@ -20,11 +20,9 @@ import sys
 
 from jose import ExpiredSignatureError, JWSError, JWTError, jws, jwt
 from jose.exceptions import JWTClaimsError
-import werkzeug
 
-# from werkzeug.middleware.proxy_fix import ProxyFix
-###TODO: change auth0 from single page app to regular web app
-##TODO: back button for admin dashboard
+
+##       global vars       ##
 
 logging.basicConfig(
     level=logging.INFO,
@@ -38,19 +36,20 @@ ENV_FILE = find_dotenv()
 if ENV_FILE:
     load_dotenv(ENV_FILE)
 
-# Log environment load confirmation (be cautious not to log secrets)
-logging.info("Environment variables loaded.")
-
-##global vars
-
 jwks_endpoint = env.get("JWKS_ENDPOINT")
 jwks = requests.get(jwks_endpoint).json()["keys"]
-logging.info("Retrieved Auth0 JWKS.")
 
 BACKEND_URL = f"http://{env.get('BACKEND_HOST')}:{env.get('BACKEND_PORT')}"
 
+# maintainable string URL vars
+JSON_CONTENT_TYPE = "application/json"
+ERROR_NOT_AUTHENTICATED = "Not authenticated"
 
-##  helper functions ##
+##                        ##
+
+
+##     helper functions   ##
+
 def find_public_key(kid, provider="auth0"):
     keys = jwks 
     for key in keys:
@@ -147,9 +146,10 @@ def get_user_email_from_auth0(user_id):
 
     return user_data["email"]
 
-## 
+##                                  ##
 
-## Initialize Flask App
+##      Initialize Flask App        ##
+
 app = Flask(__name__, template_folder='Frontend')
 CORS(app, resources={r"/*": {"origins": [f"https://{env.get('AUTH0_DOMAIN')}", "https://dev-ham70vsz2hjzbwgm.us.auth0.com","https://tipsweb.me","https://tips-173404681190.us-central1.run.app", "https://tipsweb-173404681190.us-central1.run.app", "http://localhost:3000", "https://tips-lrebn2rkuq-uc.a.run.app", "https://tipsweb-lrebn2rkuq-uc.a.run.app"]}},
      supports_credentials=True, allow_headers=["Authorization", "Content-Type"])
@@ -185,8 +185,9 @@ oauth.register(
     token_endpoint=f'https://{env.get("AUTH0_DOMAIN")}/oauth/token'
 )
 
+##                     ##
 
-# Routes
+##       Routes        ##
 @app.route("/")
 def index():
     logging.info("Rendering index page.")
@@ -255,7 +256,7 @@ def logout():
                 response = requests.delete(
                     backend_url,
                     json={"user": email},  # Send email in the request body
-                    headers={"Content-Type": "application/json"}
+                    headers={"Content-Type": JSON_CONTENT_TYPE}
                 )
                 if response.status_code == 200:
                     logging.info("logout: Simulation session deleted successfully.")
@@ -288,7 +289,7 @@ def logout():
 ##session management 
 
 ##Testing user id extraction for comm with session management
-##TODO: comment out
+##TODO: comment/uncomment
 
 # @app.route("/test/user-id")
 # def test_user_id():
@@ -315,7 +316,7 @@ def start_simulation_session():
     user_id = get_current_user_id()
     if not user_id:
         logging.warning("start_simulation_session: No authenticated user found")
-        return jsonify({"error": "Not authenticated"}), 401
+        return jsonify({"error": ERROR_NOT_AUTHENTICATED}), 401
     
     # Prepare user info with just the user_id
     ##can add more info from user if needed 
@@ -335,20 +336,15 @@ def start_simulation_session():
     }
         
     print(f"Payload being sent to backend: {user_info}")
-
-    # Send info to simulation backend
-    # port = get_session_port()
-    # if not port:
-    #     return jsonify({"error": "Failed to retrieve session port"}), 400
     
     backend_url = f"{BACKEND_URL}/start_session"
-    logging.info(f"start_simulation_session: Sending user_id to {backend_url}") ##{user_id}
+    logging.info(f"start_simulation_session: Sending user_id to {backend_url}") 
     
     try:
         response = requests.post(
             backend_url,
             json=user_info,
-            headers={"Content-Type": "application/json"}
+            headers={"Content-Type": JSON_CONTENT_TYPE}
         )
         
         if response.status_code == 200:
@@ -374,7 +370,7 @@ def get_session():
     user_id = get_current_user_id()
     if not user_id:
         logging.warning("get_session: No authenticated user found")
-        return jsonify({"error": "Not authenticated"}), 401
+        return jsonify({"error": ERROR_NOT_AUTHENTICATED}), 401
 
     # Send request to the backend
     backend_url = f"{BACKEND_URL}/get_session"
@@ -384,7 +380,7 @@ def get_session():
             ##params not accepted in backend, if json body param doesnt work need to change backend
             #params={"user": get_user_email_from_auth0(user_id)},  # Send eamil as a query parameter
             json={"user": get_user_email_from_auth0(user_id)},  # Send user_id in the request body
-            headers={"Content-Type": "application/json"}
+            headers={"Content-Type": JSON_CONTENT_TYPE}
         )
         if response.status_code == 200:
             session_data = response.json()
@@ -406,7 +402,7 @@ def delete_session():
     user_id = get_current_user_id()
     if not user_id:
         logging.warning("delete_session: No authenticated user found")
-        return jsonify({"error": "Not authenticated"}), 401
+        return jsonify({"error": ERROR_NOT_AUTHENTICATED}), 401
 
     # Send request to the backend
     backend_url = f"{BACKEND_URL}/delete_session"
@@ -414,7 +410,7 @@ def delete_session():
         response = requests.delete(
             backend_url,
             json={"user": get_user_email_from_auth0(user_id)},  # Send user_id in the request body
-            headers={"Content-Type": "application/json"}
+            headers={"Content-Type": JSON_CONTENT_TYPE}
         )
         if response.status_code == 200:
             if "simulation_session" in session:
