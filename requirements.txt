@@ -6,3 +6,4 @@ requests_oauthlib
 python-jose
 flask_cors
 six
+docker
