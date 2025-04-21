@@ -13,7 +13,7 @@ import flask
 import requests
 from requests_oauthlib import OAuth2Session
 from dotenv import find_dotenv, load_dotenv
-from flask import Flask, jsonify, logging, redirect, render_template, session, url_for, request, current_app
+from flask import Flask, jsonify, logging, redirect, render_template, session, url_for, request, make_response
 from functools import wraps
 from flask_cors import cross_origin, CORS
 import logging
@@ -157,7 +157,7 @@ def get_session_port():
         return None
 
     # Call the /get_session function directly
-    response = get_session()
+    response =  make_response(get_session())
     if response.status_code == 200:
         session_data = response.get_json()
         port = session_data.get("port")
@@ -452,6 +452,21 @@ def delete_session():
         logging.error(f"delete_session: {error_msg}")
         return jsonify({"error": error_msg}), 503
     
+## app routing to simulation upon user input
+@app.route('/launch-app')
+def launch_app():
+    if not session.get('user'):
+        # Redirect to login page with a return_to parameter
+        return redirect(url_for('login', return_to='/launch-app'))
+
+    port = get_session_port()
+    if not port:
+        return jsonify({"error": "Failed to retrieve session port"}), 400
+    
+    launch_url = f"http://24.250.182.57:{port}/start_session" 
+    #launch_url = "https://media.istockphoto.com/id/1418210562/photo/brazil-wildlife-capybara-hydrochoerus-hydrochaeris-biggest-mouse-near-the-water-with-evening.jpg?s=1024x1024&w=is&k=20&c=AzD8FahPVht7LfDs1WT5snMDHHi1pMvH7lnsgmzgfpA="
+    return render_template('launch-app.html', launch_url=launch_url)
+
 
 @app.route('/admin')
 @requires_admin
@@ -483,23 +498,6 @@ def admin_dashboard():
     
     logging.info("Fetched admin users successfully.")
     return render_template('admin-dash.html', users=users_response)
-
-
-## app routing to simulation upon user input
-@app.route('/launch-app')
-def launch_app():
-    if not session.get('user'):
-        # Redirect to login page with a return_to parameter
-        return redirect(url_for('login', return_to='/launch-app'))
-
-    port = get_session_port()
-    if not port:
-        return jsonify({"error": "Failed to retrieve session port"}), 400
-    
-    launch_url = f"http://24.250.182.57:{port}/start_session" 
-    #launch_url = "https://media.istockphoto.com/id/1418210562/photo/brazil-wildlife-capybara-hydrochoerus-hydrochaeris-biggest-mouse-near-the-water-with-evening.jpg?s=1024x1024&w=is&k=20&c=AzD8FahPVht7LfDs1WT5snMDHHi1pMvH7lnsgmzgfpA="
-    return render_template('launch-app.html', launch_url=launch_url)
-
 
 
 @app.route('/admin/delete-user/<user_id>', methods=['DELETE'])
