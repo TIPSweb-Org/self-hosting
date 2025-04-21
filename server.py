@@ -13,7 +13,7 @@ import flask
 import requests
 from requests_oauthlib import OAuth2Session
 from dotenv import find_dotenv, load_dotenv
-from flask import Flask, jsonify, logging, redirect, render_template, session, url_for, request
+from flask import Flask, jsonify, logging, redirect, render_template, session, url_for, request, current_app
 from functools import wraps
 from flask_cors import cross_origin, CORS
 import logging
@@ -146,6 +146,25 @@ def get_user_email_from_auth0(user_id):
         return None
 
     return user_data["email"]
+
+
+def get_session_port():
+    """Call the /get_session route internally and extract the port."""
+    with current_app.test_client() as client:
+        response = client.get("/get_session")
+        if response.status_code == 200:
+            session_data = response.get_json()
+            port = session_data.get("port")
+            if port:
+                logging.info(f"get_session_port: Retrieved port: {port}")
+                return port
+            else:
+                logging.error("get_session_port: Port not found in session data")
+                return None
+        else:
+            logging.error(f"get_session_port: Failed to retrieve session: {response.get_json()}")
+            return None
+        
 ## 
 
 
@@ -336,7 +355,11 @@ def start_simulation_session():
     print(f"Payload being sent to backend: {user_info}")
 
     # Send info to simulation backend
-    backend_url = "http://24.250.182.57:42823/start_session"
+    port = get_session_port()
+    if not port:
+        return jsonify({"error": "Failed to retrieve session port"}), 400
+    
+    backend_url = f"http://24.250.182.57:42823/start_session"
     logging.info(f"start_simulation_session: Sending user_id to {backend_url}") ##{user_id}
     
     try:
@@ -463,7 +486,11 @@ def launch_app():
         # Redirect to login page with a return_to parameter
         return redirect(url_for('login', return_to='/launch-app'))
 
-    launch_url = "http://24.250.182.57:42823/start_session" 
+    port = get_session_port()
+    if not port:
+        return jsonify({"error": "Failed to retrieve session port"}), 400
+    
+    launch_url = f"http://24.250.182.57:{port}/start_session" 
     #launch_url = "https://media.istockphoto.com/id/1418210562/photo/brazil-wildlife-capybara-hydrochoerus-hydrochaeris-biggest-mouse-near-the-water-with-evening.jpg?s=1024x1024&w=is&k=20&c=AzD8FahPVht7LfDs1WT5snMDHHi1pMvH7lnsgmzgfpA="
     return render_template('launch-app.html', launch_url=launch_url)
 
