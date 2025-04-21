@@ -80,20 +80,20 @@
           </ul>
         </div>
 
-        <button id="launchBtn" class="launch-button">Launch TIPS</button>
+        <button id="launchBtn" class="launch-button">Start TIPS</button>
         <button
           id="getSessionBtn"
           class="secondary-button"
           style="display: none"
         >
-          Get Session Info
+          Open Simulation
         </button>
         <button
           id="deleteSessionBtn"
           class="secondary-button"
           style="display: none"
         >
-          Delete Session
+          End Session
         </button>
 
         <div id="sessionOutput"></div>
@@ -122,15 +122,8 @@
           if (res.ok) {
             // Optionally process the response from the backend if needed
             var sessionData = await res.json();
-            var launchUrl = ``;
-            output.textContent = "Session started successfully!";
-            if (sessionData && sessionData.port) {
-            // Construct the launch URL with the port from the response
-                launchUrl = `http://24.250.182.57:${sessionData.port}`;
-                window.open(launchUrl, "_blank");
-            }else{
-                console.error("No port in session data:", sessionData);
-            }
+            //TODO: change with username and password
+            output.textContent = "Session started successfully.";
             toggleButtons(true); 
           } else {
             const errorData = await res.json();
@@ -152,8 +145,16 @@
             }
           });
           if (res.ok) {
-            const data = await res.json();
-            output.textContent = JSON.stringify(data, null, 2);
+            var sessionData = await res.json();
+            var launchUrl = ``;
+            if (sessionData && sessionData.port) {
+            // Construct the launch URL with the port from the response
+                launchUrl = `http://24.250.182.57:${sessionData.port}`;
+                window.open(launchUrl, "_blank");
+            }else{
+                console.error("No port in session data:", sessionData);
+            }
+            //output.textContent = JSON.stringify(data, null, 2);
           } else {
             const errorData = await res.json();
             output.textContent = "Error retrieving session: " + JSON.stringify(errorData);
