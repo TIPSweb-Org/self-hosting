@@ -6,12 +6,13 @@ from typing import Annotated, Tuple, Union
 from urllib.parse import quote_plus, urlencode
 from urllib.request import urlopen
 
+
 from authlib.integrations.flask_client import OAuth
 import flask
 import requests
 from requests_oauthlib import OAuth2Session
 from dotenv import find_dotenv, load_dotenv
-from flask import Flask, jsonify, logging, redirect, render_template, session, url_for, request
+from flask import Flask, jsonify, logging, redirect, render_template, session, url_for, request, make_response
 from functools import wraps
 from flask_cors import cross_origin, CORS
 import logging
@@ -19,11 +20,9 @@ import sys
 
 from jose import ExpiredSignatureError, JWSError, JWTError, jws, jwt
 from jose.exceptions import JWTClaimsError
-import werkzeug
 
-# from werkzeug.middleware.proxy_fix import ProxyFix
-###TODO: change aut0 from single page app to regular web app
-##TODO: back button for admin dashboard
+
+##       global vars       ##
 
 logging.basicConfig(
     level=logging.INFO,
@@ -37,13 +36,19 @@ ENV_FILE = find_dotenv()
 if ENV_FILE:
     load_dotenv(ENV_FILE)
 
-# Log environment load confirmation (be cautious not to log secrets)
-logging.info("Environment variables loaded.")
-
 jwks_endpoint = env.get("JWKS_ENDPOINT")
 jwks = requests.get(jwks_endpoint).json()["keys"]
-logging.info("Retrieved Auth0 JWKS.")
 
+BACKEND_URL = f"http://{env.get('BACKEND_HOST')}:{env.get('BACKEND_PORT')}"
+
+# maintainable string URL vars
+JSON_CONTENT_TYPE = "application/json"
+ERROR_NOT_AUTHENTICATED = "Not authenticated"
+
+##                        ##
+
+
+##     helper functions   ##
 
 def find_public_key(kid, provider="auth0"):
     keys = jwks 
@@ -87,13 +92,71 @@ def requires_admin(f):
         return redirect(url_for("index"))
     return decorated
 
-## Initialize Flask App
+def get_current_user_id():
+    """Helper function to extract user ID from the current session"""
+    user = session.get("user")
+    if not user:
+        logging.warning("get_current_user_id: No user in session")
+        return None
+    
+    if "token" not in user:
+        logging.warning("get_current_user_id: No token in user session")
+        return None
+    
+    logging.info("get_current_user_id: Attempting to validate token")
+    token_payload = validate_token(user["token"]["access_token"])
+    
+    if not token_payload:
+        logging.warning("get_current_user_id: Token validation failed")
+        return None
+    
+    user_id = token_payload.get("sub")
+    logging.info(f"get_current_user_id: Successfully extracted user_id: {user_id}")
+    return user_id
+
+def get_user_email_from_auth0(user_id):
+    """Retrieve the user's email from Auth0 using the Management API."""
+    payload = {
+        "client_id": env.get("M2M_CLIENT_ID"),
+        "client_secret": env.get("M2M_CLIENT_SECRET"),
+        "audience": f"https://{env.get('M2M_DOMAIN')}/api/v2/",
+        "grant_type": "client_credentials"
+    }
+
+    # Get the M2M token
+    token_response = requests.post(
+        f"https://{env.get('M2M_DOMAIN')}/oauth/token",
+        json=payload
+    )
+    token = token_response.json()
+    if "access_token" not in token:
+        logging.error(f"Error obtaining M2M token: {token.get('error_description')}")
+        return None
+
+    # Query the Auth0 Management API for the user's email
+    headers = {"Authorization": f"Bearer {token['access_token']}"}
+    user_response = requests.get(
+        f'https://{env.get("M2M_DOMAIN")}/api/v2/users/{user_id}',
+        headers=headers
+    )
+    user_data = user_response.json()
+    if "email" not in user_data:
+        logging.error(f"Failed to retrieve email for user_id {user_id}: {user_data}")
+        return None
+
+    return user_data["email"]
+
+##                                  ##
+
+##      Initialize Flask App        ##
+
 app = Flask(__name__, template_folder='Frontend')
 CORS(app, resources={r"/*": {"origins": [f"https://{env.get('AUTH0_DOMAIN')}", "https://dev-ham70vsz2hjzbwgm.us.auth0.com","https://tipsweb.me","https://tips-173404681190.us-central1.run.app", "https://tipsweb-173404681190.us-central1.run.app", "http://localhost:3000", "https://tips-lrebn2rkuq-uc.a.run.app", "https://tipsweb-lrebn2rkuq-uc.a.run.app"]}},
      supports_credentials=True, allow_headers=["Authorization", "Content-Type"])
 
 app.secret_key = env.get("APP_SECRET_KEY")
 is_local = env.get('FLASK_ENV') == 'development'
+
 # Uncomment and configure ProxyFix if needed
 # app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
 
@@ -122,7 +185,9 @@ oauth.register(
     token_endpoint=f'https://{env.get("AUTH0_DOMAIN")}/oauth/token'
 )
 
-# Routes
+##                     ##
+
+##       Routes        ##
 @app.route("/")
 def index():
     logging.info("Rendering index page.")
@@ -134,6 +199,11 @@ def index():
 
 @app.route("/login")
 def login():
+    ##for launch  app if user not logged in
+    return_to = request.args.get('return_to')
+    if return_to:
+        session['return_to'] = return_to
+
     auth_redirect = oauth.auth0.authorize_redirect(
         redirect_uri=url_for("callback", _external=True, _scheme='http' if is_local else 'https'),
         audience=env.get("AUTH0_AUDIENCE"),
@@ -154,7 +224,14 @@ def callback():
             "permissions": token_payload.get("permissions", [])
         }
 
-        return redirect("/")
+        return_to = session.pop('return_to', None)
+    
+        # If return_to exists, redirect there; otherwise go to home page
+        if return_to:
+            return redirect(return_to)
+        else:
+            return redirect('/')
+        #return redirect("/")
     except requests.exceptions.HTTPError as http_err:
         logging.error(f"HTTP error during token exchange: {http_err}")
         return str(http_err), 401
@@ -163,8 +240,35 @@ def callback():
         logging.error(f"Full error details: {repr(e)}")
         return str(e), 401
 
+##TODO: disregard all error checks/ reduce steps for ending session. 
 @app.route("/logout")
 def logout():
+    """Log out the user, delete the simulation session, and redirect to the logout URL."""
+    logging.info("User logging out, attempting to delete simulation session.")
+
+    # Attempt to delete the simulation session
+    user_id = get_current_user_id()
+    if user_id:
+        try:
+            email = get_user_email_from_auth0(user_id)
+            if email:
+                backend_url = f"{BACKEND_URL}/delete_session"
+                response = requests.delete(
+                    backend_url,
+                    json={"user": email},  # Send email in the request body
+                    headers={"Content-Type": JSON_CONTENT_TYPE}
+                )
+                if response.status_code == 200:
+                    logging.info("logout: Simulation session deleted successfully.")
+                else:
+                    logging.warning(f"logout: Failed to delete simulation session: {response.text}")
+            else:
+                logging.warning("logout: Failed to retrieve email for session deletion.")
+        except requests.RequestException as e:
+            logging.error(f"logout: Error deleting simulation session: {str(e)}")
+    else:
+        logging.warning("logout: No authenticated user found, skipping session deletion.")
+    
     logging.info("User logging out, clearing session.")
     session.clear()
     logout_url = (
@@ -181,6 +285,158 @@ def logout():
     )
     logging.info(f"Redirecting to logout URL: {logout_url}")
     return redirect(logout_url)
+
+##session management 
+
+##Testing user id extraction for comm with session management
+##TODO: comment/uncomment
+
+# @app.route("/test/user-id")
+# def test_user_id():
+#     logging.info("test_user_id endpoint called")
+#     user_id = get_current_user_id()
+#     if user_id:
+#         logging.info(f"test_user_id: Found user_id: {user_id}")
+#         return jsonify({"user_id": user_id})
+#     else:
+#         logging.warning("test_user_id: No user_id found")
+#         return jsonify({"error": "No user ID found"}), 401
+    
+##store user session data
+##user id,  Docker id, Port and co-port
+##start session starts session based on user id spits out docker image
+#launch tips 
+
+##TODO: clean up this function, reduce lines used for user_email json extraction
+
+@app.route("/api/start-simulation-session", methods=["POST"])
+def start_simulation_session():
+    """Start simulation session by sending user ID to the backend"""
+    # get id, use the helper function
+    user_id = get_current_user_id()
+    if not user_id:
+        logging.warning("start_simulation_session: No authenticated user found")
+        return jsonify({"error": ERROR_NOT_AUTHENTICATED}), 401
+    
+    # Prepare user info with just the user_id
+    ##can add more info from user if needed 
+    user = session.get("user")
+    token_payload = validate_token(user["token"]["access_token"])
+
+    email = token_payload.get("email")
+
+    if not email: ##TODO: check if this is being entered (probably)
+        logging.info("Email not found in token payload, fetching from Auth0")
+        email = get_user_email_from_auth0(user_id)
+        if not email:
+            return jsonify({"error": "Failed to retrieve email"}), 400
+
+    user_info = {
+        "user": email
+    }
+        
+    print(f"Payload being sent to backend: {user_info}")
+    
+    backend_url = f"{BACKEND_URL}/start_session"
+    logging.info(f"start_simulation_session: Sending user_id to {backend_url}") 
+    
+    try:
+        response = requests.post(
+            backend_url,
+            json=user_info,
+            headers={"Content-Type": JSON_CONTENT_TYPE}
+        )
+        
+        if response.status_code == 200:
+            session_data = response.json()
+            # Store the session info in our session for later use
+            session["simulation_session"] = session_data
+            logging.info(f"start_simulation_session: Successfully started session: {session_data}")
+            return jsonify(session_data)
+        else:
+            error_msg = f"Backend service returned {response.status_code}: {response.text}"
+            logging.error(f"start_simulation_session: {error_msg}")
+            return jsonify({"error": error_msg}), response.status_code
+    
+    except requests.RequestException as e:
+        error_msg = f"Failed to connect to backend service: {str(e)}"
+        logging.error(f"start_simulation_session: {error_msg}")
+        return jsonify({"error": error_msg}), 503
+
+
+@app.route("/get_session", methods=["GET"])
+def get_session():
+    """Retrieve the simulation session for the current user"""
+    user_id = get_current_user_id()
+    if not user_id:
+        logging.warning("get_session: No authenticated user found")
+        return jsonify({"error": ERROR_NOT_AUTHENTICATED}), 401
+
+    # Send request to the backend
+    backend_url = f"{BACKEND_URL}/get_session"
+    try:
+        response = requests.get(
+            backend_url,
+            ##params not accepted in backend, if json body param doesnt work need to change backend
+            #params={"user": get_user_email_from_auth0(user_id)},  # Send eamil as a query parameter
+            json={"user": get_user_email_from_auth0(user_id)},  # Send user_id in the request body
+            headers={"Content-Type": JSON_CONTENT_TYPE}
+        )
+        if response.status_code == 200:
+            session_data = response.json()
+            logging.info(f"get_session: Retrieved session: {session_data}")
+            return jsonify(session_data)
+        else:
+            error_msg = f"Backend service returned {response.status_code}: {response.text}"
+            logging.error(f"get_session: {error_msg}")
+            return jsonify({"error": error_msg}), response.status_code
+    except requests.RequestException as e:
+        error_msg = f"Failed to connect to backend service: {str(e)}"
+        logging.error(f"get_session: {error_msg}")
+        return jsonify({"error": error_msg}), 503
+
+
+@app.route("/delete_session", methods=["POST"])
+def delete_session():
+    """Delete the simulation session for the current user"""
+    user_id = get_current_user_id()
+    if not user_id:
+        logging.warning("delete_session: No authenticated user found")
+        return jsonify({"error": ERROR_NOT_AUTHENTICATED}), 401
+
+    # Send request to the backend
+    backend_url = f"{BACKEND_URL}/delete_session"
+    try:
+        response = requests.delete(
+            backend_url,
+            json={"user": get_user_email_from_auth0(user_id)},  # Send user_id in the request body
+            headers={"Content-Type": JSON_CONTENT_TYPE}
+        )
+        if response.status_code == 200:
+            if "simulation_session" in session:
+                session.pop("simulation_session")
+                logging.info("delete_session: Removed simulation_session from Flask session")
+
+            logging.info("delete_session: Session deleted successfully")
+            return jsonify({"status": "success"})
+        else:
+            error_msg = f"Backend service returned {response.status_code}: {response.text}"
+            logging.error(f"delete_session: {error_msg}")
+            return jsonify({"error": error_msg}), response.status_code
+    except requests.RequestException as e:
+        error_msg = f"Failed to connect to backend service: {str(e)}"
+        logging.error(f"delete_session: {error_msg}")
+        return jsonify({"error": error_msg}), 503
+    
+## app routing to simulation upon user input
+@app.route('/launch-app')
+def launch_app():
+    if not session.get('user'):
+        # Redirect to login page with a return_to parameter
+        return redirect(url_for('login', return_to='/launch-app'))
+
+    return render_template('launch-app.html')
+
 
 @app.route('/admin')
 @requires_admin
@@ -213,12 +469,14 @@ def admin_dashboard():
     logging.info("Fetched admin users successfully.")
     return render_template('admin-dash.html', users=users_response)
 
+
 @app.route('/admin/delete-user/<user_id>', methods=['DELETE'])
 @requires_admin
 def delete_user(user_id):
     ##added to protect against vulneribility
     import re
     if not re.match(r'^[a-zA-Z0-9|_-]+$', user_id):
+
         return jsonify({"status": "error", "message": "Invalid user ID format"}), 400
     ##
 
@@ -249,7 +507,7 @@ def delete_user(user_id):
         headers=headers
     )
     ##
-    
+
     return jsonify({"status": "success" if delete_response.ok else "error"})
 
 
@@ -312,7 +570,6 @@ def auth_info():
         return jsonify(token_payload)
     except Exception as e:
         return jsonify({"error": str(e)}), 400
-
 
 
 if __name__ == "__main__":

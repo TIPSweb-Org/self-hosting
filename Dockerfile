@@ -12,5 +12,6 @@ COPY Frontend/ /home/app/Frontend/
 
 EXPOSE 3000
 
-CMD ["python", "server.py"]
+CMD ["python", "server.py" ]
+
 
