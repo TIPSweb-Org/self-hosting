@@ -418,6 +418,10 @@ def delete_session():
             headers={"Content-Type": "application/json"}
         )
         if response.status_code == 200:
+            if "simulation_session" in session:
+                session.pop("simulation_session")
+                logging.info("delete_session: Removed simulation_session from Flask session")
+
             logging.info("delete_session: Session deleted successfully")
             return jsonify({"status": "success"})
         else:
