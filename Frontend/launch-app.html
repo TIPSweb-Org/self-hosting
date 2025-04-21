@@ -121,8 +121,8 @@
           });
           if (res.ok) {
             // Optionally process the response from the backend if needed
-            const sessionData = await res.json();
-            const launchUrl = ``;
+            var sessionData = await res.json();
+            var launchUrl = ``;
             output.textContent = "Session started successfully!";
             if (sessionData && sessionData.port) {
             // Construct the launch URL with the port from the response
