@@ -361,9 +361,9 @@ def start_simulation_session():
     print(f"Payload being sent to backend: {user_info}")
 
     # Send info to simulation backend
-    port = get_session_port()
-    if not port:
-        return jsonify({"error": "Failed to retrieve session port"}), 400
+    # port = get_session_port()
+    # if not port:
+    #     return jsonify({"error": "Failed to retrieve session port"}), 400
     
     backend_url = f"http://24.250.182.57:42823/start_session"
     logging.info(f"start_simulation_session: Sending user_id to {backend_url}") ##{user_id}
@@ -459,11 +459,12 @@ def launch_app():
         # Redirect to login page with a return_to parameter
         return redirect(url_for('login', return_to='/launch-app'))
 
-    port = get_session_port()
-    if not port:
-        return jsonify({"error": "Failed to retrieve session port"}), 400
+    # port = get_session_port()
+    # if not port:
+    #     return jsonify({"error": "Failed to retrieve session port"}), 400
     
-    launch_url = f"http://24.250.182.57:{port}/start_session" 
+    #launch_url = f"http://24.250.182.57:{port}/start_session"  
+    launch_url = f"http://24.250.182.57:42823/start_session" 
     #launch_url = "https://media.istockphoto.com/id/1418210562/photo/brazil-wildlife-capybara-hydrochoerus-hydrochaeris-biggest-mouse-near-the-water-with-evening.jpg?s=1024x1024&w=is&k=20&c=AzD8FahPVht7LfDs1WT5snMDHHi1pMvH7lnsgmzgfpA="
     return render_template('launch-app.html', launch_url=launch_url)
 
