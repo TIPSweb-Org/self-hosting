@@ -376,7 +376,9 @@ def get_session():
     try:
         response = requests.get(
             backend_url,
-            params={"user": get_user_email_from_auth0(user_id)},  # Send eamil as a query parameter
+            ##params not accepted in backend, if json body param doesnt work need to change backend
+            #params={"user": get_user_email_from_auth0(user_id)},  # Send eamil as a query parameter
+            json={"user": get_user_email_from_auth0(user_id)},  # Send user_id in the request body
             headers={"Content-Type": "application/json"}
         )
         if response.status_code == 200:
