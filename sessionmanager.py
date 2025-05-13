@@ -1,25 +1,8 @@
-# app.py
 
-from flask import Flask, request, session, jsonify
 import random
 import docker
-from dotenv import find_dotenv, load_dotenv
-import os 
-from os import environ as env
 
-
-ENV_FILE = find_dotenv()
-if ENV_FILE:
-    load_dotenv(ENV_FILE)
-
-app = Flask(__name__)
-app.secret_key = env.get("APP_SECRET_KEY")  # same as server.py, im ps this is how it should b?
-app.config["SESSION_TYPE"] = "filesystem"
-
-## Global vars ##
-ERROR_NOT_LOGGED_IN = "User not logged in" 
-
-
+# Session Management
 class Session:
     def __init__(self, user_id, docker_id, port, control_port):
         self.user_id = user_id
@@ -147,66 +130,3 @@ class SessionManager:
         del self.sessions[user_id]
 
         return True
-
-
-
-# Instantiate the session manager
-max_sessions = 5
-# image_name = "your_docker_image_name" 
-session_manager = SessionManager(max_sessions)
-
-
-@app.route("/start_session", methods=["POST"])
-def start_session():
-
-    data = request.get_json(silent=True) or {}
-    print(data)
-    user = data.get("user")
-    
-    if not user:
-        return jsonify({"error": ERROR_NOT_LOGGED_IN}), 401
-
-    try:
-        sess = session_manager.start_session(user)
-        return jsonify(sess.to_dict())
-    except Exception as e:
-        return jsonify({"error": str(e)}), 400
-
-
-@app.route("/get_session", methods=["GET"])
-def get_session_route():
-    
-    data = request.get_json(silent=True) or {}
-    print(data)
-    user = data.get("user")
-    
-    
-    if not user:
-        return jsonify({"error": ERROR_NOT_LOGGED_IN}), 401
-
-    sess = session_manager.get_session(user)
-    if not sess:
-        return jsonify({"error": "No session found"}), 404
-    return jsonify(sess.to_dict())
-
-
-@app.route("/delete_session", methods=["DELETE"])
-def delete_session_route():
-    
-    data = request.get_json(silent=True) or {}
-    print(data)
-    user = data.get("user")
-    
-    if not user:
-        return jsonify({"error": ERROR_NOT_LOGGED_IN}), 401
-    
-    success = session_manager.delete_session(user)
-
-    if success:
-        return jsonify({"status": "Session deleted"})
-    return jsonify({"error": "No session to delete"}), 404
-
-
-if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 42823))
-    app.run(host="0.0.0.0", port=port)

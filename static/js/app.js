@@ -3,6 +3,6 @@ document.addEventListener("DOMContentLoaded", function () {
 
   beginButton.addEventListener("click", function () {
     // Using a relative URL for security (prevents open redirect vulnerabilities)
-    window.location.href = "/launch-app";
+    window.location.href = "/home";
   });
 });
