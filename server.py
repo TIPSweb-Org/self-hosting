@@ -1,6 +1,6 @@
 import os
 from functools import wraps
-from flask import Flask, render_template, redirect, url_for, request, flash, session, jsonify
+from flask import Flask, render_template, redirect, url_for, request, flash, session, jsonify, request, Response, stream_with_context
 from flask_login import (
     LoginManager,
     UserMixin,
@@ -57,7 +57,6 @@ def load_user(user_id):
     return users.get(user_id)
 
 # Constants
-BACKEND_URL = f"http://{os.environ.get('BACKEND_HOST')}:{os.environ.get('BACKEND_PORT')}"
 JSON_CONTENT_TYPE = "application/json"
 ERROR_NOT_AUTHENTICATED = "Not authenticated"
 
@@ -98,19 +97,16 @@ def login():
     
     return render_template('login.html')
 
+
 @app.route('/logout')
 @login_required
 def logout():
-    # Clear backend session if exists
+    # Clear local session if exists
     if 'simulation_session' in session:
         try:
-            requests.delete(
-                f"{BACKEND_URL}/delete_session",
-                json={"user": current_user.email},
-                headers={"Content-Type": JSON_CONTENT_TYPE}
-            )
-        except requests.RequestException as e:
-            flash('Error clearing backend session', 'error')
+            session_manager.delete_session(current_user.email)
+        except Exception as e:
+            flash('Error clearing session', 'error')
     
     logout_user()
     session.clear()
@@ -139,43 +135,6 @@ def register():
 
     return render_template('register.html')
 
-
-# Session management endpoints
-@app.route('/api/start-simulation-session', methods=['POST'])
-@login_required
-def start_simulation_session():
-    if not current_user.is_authenticated:
-        return jsonify({"error": ERROR_NOT_AUTHENTICATED}), 401
-
-    try:
-        response = requests.post(
-            f"{BACKEND_URL}/start_session",
-            json={"user": current_user.email},
-            headers={"Content-Type": JSON_CONTENT_TYPE}
-        )
-        response.raise_for_status()
-        session_data = response.json()
-        session["simulation_session"] = session_data
-        return jsonify(session_data)
-    except requests.RequestException as e:
-        return jsonify({"error": str(e)}), 503
-
-
-@app.route('/get_session', methods=['GET'])
-@login_required
-def get_session():
-    try:
-        response = requests.get(
-            f"{BACKEND_URL}/get_session",
-            json={"user": current_user.email},
-            headers={"Content-Type": JSON_CONTENT_TYPE}
-        )
-        response.raise_for_status()
-        return jsonify(response.json())
-    except requests.RequestException as e:
-        return jsonify({"error": str(e)}), 503
-
-
     
 @app.route('/home')
 @login_required
@@ -197,13 +156,33 @@ def start_session():
     except Exception as e:
         return jsonify({"error": str(e)}), 400
 
+@app.route("/stream/<stream_id>", methods=["GET"])
+def stream(stream_id):
+    session = session_manager.get_session_by_stream_id(stream_id)
+    if not session:
+        abort(404)
+    
+    # Here you would implement your WebRTC streaming logic
+    # For now, we'll just return the session info
+    return _proxy_request(session, "")
 
-@app.route("/get_session", methods=["GET"])
+@app.route("/stream/<stream_id>/<path:subpath>", methods=["GET", "POST", "PUT", "DELETE"])
+def stream_proxy(stream_id, subpath):
+    session = session_manager.get_session_by_stream_id(stream_id)
+    if not session:
+        abort(404)
+    
+    return _proxy_request(session, subpath)
+
+
+@app.route("/get_session", methods=["POST"])
 @login_required
 def get_session_route():
     sess = session_manager.get_session(current_user.email)
     if not sess:
         return jsonify({"error": "No session found"}), 404
+    session_data = sess.to_dict()
+    session_data["stream_url"] = f"/stream/{sess.stream_id}"
     return jsonify(sess.to_dict())
 
 
@@ -216,6 +195,55 @@ def delete_session_route():
         return jsonify({"status": "Session deleted"})
     return jsonify({"error": "No session to delete"}), 404
 
+def _proxy_request(session, subpath):
+    """Helper function to proxy requests to the container"""
+    container_url = f"http://localhost:{session.port}/{subpath}"
+    headers = {key: value for (key, value) in request.headers if key != 'Host'}
+
+    try:
+        if request.method == 'GET':
+            resp = requests.get(
+                container_url,
+                headers=headers,
+                params=request.args,
+                stream=True
+            )
+        elif request.method == 'POST':
+            resp = requests.post(
+                container_url,
+                headers=headers,
+                data=request.get_data(),
+                stream=True
+            )
+        elif request.method == 'PUT':
+            resp = requests.put(
+                container_url,
+                headers=headers,
+                data=request.get_data(),
+                stream=True
+            )
+        elif request.method == 'DELETE':
+            resp = requests.delete(
+                container_url,
+                headers=headers,
+                stream=True
+            )
+        else:
+            abort(405)
+            
+        # Stream the response back to the client
+        def generate():
+            for chunk in resp.iter_content(chunk_size=8192):
+                yield chunk
+                
+        return Response(
+            stream_with_context(generate()),
+            status=resp.status_code,
+            headers=dict(resp.headers) 
+        )
+    except requests.exceptions.RequestException as e:
+        app.logger.error(f"Proxy error: {str(e)}")
+        abort(502, description="Bad Gateway to container")
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 3000))

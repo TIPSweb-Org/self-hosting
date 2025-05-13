@@ -1,21 +1,29 @@
 
 import random
 import docker
+import re
+import hashlib
+from datetime import datetime
+import secrets
 
 # Session Management
 class Session:
-    def __init__(self, user_id, docker_id, port, control_port):
+    def __init__(self, user_id, docker_id, port, control_port, stream_id):
         self.user_id = user_id
         self.docker_id = docker_id
         self.port = port
         self.control_port = control_port
+        self.stream_id = stream_id
+        self.created_at = datetime.now()
 
     def to_dict(self):
         return {
             "user_id": self.user_id,
             "docker_id": self.docker_id,
             "port": self.port,
-            "control_port": self.control_port
+            "control_port": self.control_port,
+            "stream_id": self.stream_id,
+            "created_at": self.created_at.isoformat()
         }
 
 
@@ -25,25 +33,19 @@ class SessionManager:
         self.sessions = {}
         self.max_sessions = max_sessions
         self.docker = docker.from_env()
+        self.stream_ids = {}
 
 
-    def start_session(self, user_id):
-        user_id = user_id.split('@')[0]
+    def start_session(self, email):
+        user_id = self.generate_user_id(email)
         if user_id in self.sessions:
             raise Exception("Session already exists.")
         if len(self.sessions) >= self.max_sessions:
             raise Exception("Max sessions reached.")
         
         # Generate a random port and control port for the session
-        picked = set()
-        port = self.get_open_port(exclude=picked)
-        picked.add(port)
-        control_port = self.get_open_port(exclude=picked)
-        picked.add(control_port)
-        http_port = self.get_open_port(exclude=picked)
-        picked.add(http_port)
-        selkies_port = self.get_open_port(exclude=picked)
-        picked.add(selkies_port)
+        port = 10000
+        control_port = 10001
 
         env = {
             "TZ": "UTC",
@@ -52,69 +54,55 @@ class SessionManager:
             "DISPLAY_REFRESH": "60",
             "DISPLAY_DPI": "96",
             "DISPLAY_CDEPTH": "24",
-            "PASSWD": "mypasswd",
-            "SELKIES_ENABLE_BASIC_AUTH": "true",
-            "SELKIES_BASIC_AUTH_USER": "ubuntu",
-            "SELKIES_BASIC_AUTH_PASSWORD": "mypasswd",
+            "SELKIES_ENABLE_BASIC_AUTH": "false",
             "SELKIES_ENCODER": "vp9enc",
             "SELKIES_VIDEO_BITRATE": "8000",
             "SELKIES_FRAMERATE": "60",
             "SELKIES_AUDIO_BITRATE": "128000",
-            "LANG": "C.UTF-8",
-            "DISPLAY": ":22",
-            "NGINX_PORT": port,
-            "SELKIES_PORT": selkies_port,
-            "SELKIES_METRICS_HTTP_PORT": http_port
-
+            "LANG": "C.UTF-8"
         }
 
         try:
             container = self.docker.containers.run(
                 image="sofa-tips-simple",
-                network_mode="host",
-                name=user_id,           
+                name=user_id,
                 detach=True,
                 tty=True,
                 tmpfs={"/dev/shm": "rw"},
-                devices={"/dev/dri" : "rwm"},
-                environment=env
+                devices=["/dev/dri:/dev/dri:rwm"],
+                environment=env,
+                ports={8080 : 10000}
             )
         except docker.errors.APIError as e:
             raise Exception(f"Docker API error: {e.explanation}")
+        
+        stream_id = self._generate_stream_id()
 
-        session = Session(user_id, container.id, port, control_port)
+        session = Session(user_id, container.id, port, control_port, stream_id
+                          )
         self.sessions[user_id] = session
+        self.stream_ids[stream_id] = session
         return session
 
-    def get_session(self, user_id):
-        user_id = user_id.split('@')[0]
+    def _generate_stream_id(self):
+        return secrets.token_urlsafe(16)
+    
+    def generate_user_id(self, id):
+        clean = re.sub(r'[^a-zA-Z0-9.]', '', id.split('@')[0])
+        hash_part = hashlib.sha256(id.encode()).hexdigest()[:8]
+        return f"{clean}-{hash_part}"
+    
+    def get_session(self, email):
+        user_id = self.generate_user_id(email)
+        if not user_id:
+            return None
         return self.sessions.get(user_id)
+    
+    def get_session_by_stream_id(self, stream_id):
+        return self.stream_ids.get(stream_id)
 
-    def get_open_port(self, exclude: set[int] = None) -> int:
-        """
-        Returns a random port in [9000..10000] that isn't already
-        used by any existing session (or by the optional `exclude` set).
-        """
-
-        exclude = exclude or set()
-
-        used = {
-            p
-            for sess in self.sessions.values()
-            for p in (sess.port, sess.control_port)
-        } | exclude
-
-        if len(used) >= (10000 - 9000 + 1):
-            raise Exception("No available ports in range 9000–10000")
-
-        while True:
-            candidate = random.randint(9000, 10000)
-            if candidate not in used:
-                return candidate
-
-
-    def delete_session(self, user_id):
-        user_id = user_id.split('@')[0]
+    def delete_session(self, email):
+        user_id = self.generate_user_id(email)
         session = self.sessions.get(user_id)
 
         if not session:
@@ -127,6 +115,9 @@ class SessionManager:
         except docker.errors.NotFound:
             pass
 
+        if session.stream_id in self.stream_ids:
+            del self.stream_ids[session.stream_id]
         del self.sessions[user_id]
 
         return True
+    
