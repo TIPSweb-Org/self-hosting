@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en" xml:lang="en">
+  <head>
+    <title>TIPSWeb - Stream TIPS</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/styles.css') }}"
+    />
+    <style>
+      .launch-container {
+        text-align: center;
+        padding: 50px 20px;
+        max-width: 800px;
+        margin: 0 auto;
+      }
+      .launch-content {
+        background-color: #f8f9fa;
+        border-radius: 8px;
+        padding: 30px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      }
+      .launch-button,
+      .secondary-button {
+        margin-top: 20px;
+        display: inline-block;
+        padding: 12px 24px;
+        background-color: #4285f4;
+        color: white;
+        text-decoration: none;
+        border-radius: 4px;
+        font-weight: bold;
+        transition: background-color 0.3s;
+        cursor: pointer;
+      }
+      .launch-button:hover,
+      .secondary-button:hover {
+        background-color: #3367d6;
+      }
+      .secondary-button {
+        background-color: #6c757d;
+      }
+      .back-link {
+        margin-top: 20px;
+        display: inline-block;
+        padding: 10px 20px;
+        color: #4285f4;
+        text-decoration: none;
+      }
+      #sessionOutput {
+        margin-top: 20px;
+        white-space: pre-wrap;
+        font-family: monospace;
+        color: #333;
+      }
+    </style>
+  </head>
+  <body>
+    {% include 'banner.html' %}
+
+    <div class="launch-container">
+      <div class="launch-content">
+        <h2>TIPS Surgical Procedure Toolkit</h2>
+        <p>
+          You are about to access the TIPS interactive surgical procedure
+          toolkit hosted on the Selkies streaming platform.
+        </p>
+        <p>
+          This application provides advanced 3D visualization and interactive
+          tools for laparoscopic surgical education and training.
+        </p>
+
+        <div class="instructions">
+          <h3>What to expect:</h3>
+          <ul style="text-align: left">
+            <li>Interactive 3D models of procedures</li>
+            <li>Step-by-step guides for various techniques</li>
+            <li>Educational resources for medical professionals</li>
+          </ul>
+        </div>
+
+        <button id="launchBtn" class="launch-button">Start TIPS</button>
+        <button
+          id="getSessionBtn"
+          class="secondary-button"
+          style="display: none"
+        >
+          Open Session
+        </button>
+        <button
+          id="deleteSessionBtn"
+          class="secondary-button"
+          style="display: none"
+        >
+          End Session
+        </button>
+
+        <div id="sessionOutput"></div>
+        <br />
+        <a href="/" class="back-link">Return to Home</a>
+      </div>
+    </div>
+    <script>
+      const launchBtn = document.getElementById("launchBtn");
+      const getBtn = document.getElementById("getSessionBtn");
+      const delBtn = document.getElementById("deleteSessionBtn");
+      const output = document.getElementById("sessionOutput");
+    
+      const currentUser = "{{ current_user.email }}"; // assuming Auth0 puts this in session
+    
+      async function startSessionAndRedirect() {
+        try {
+          const res = await fetch("/start_session", {
+            method: "POST",
+            credentials: "include",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ user: currentUser })
+          });
+    
+          if (res.ok) {
+            output.textContent = "The session started successfully! It may take a second to load upon opening.\n";
+            output.textContent += "The session will prompt you for a username and password: \n\n";
+            output.textContent += "Username: ubuntu \nPassword: mypasswd";
+            toggleButtons(true);
+          } else {
+            const errorData = await res.json();
+            output.textContent = "Failed to start session: " + JSON.stringify(errorData);
+          }
+        } catch (err) {
+          output.textContent = "Error starting session: " + err.message;
+        }
+      }
+    
+      async function getSession() {
+        try {
+          const res = await fetch("/get_session", {
+            method: "POST",  // <-- changed to POST since you expect JSON body
+            credentials: "include",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ user: currentUser })
+          });
+    
+          if (res.ok) {
+            const sessionData = await res.json();
+            if (sessionData && sessionData.port) {
+              const launchUrl = `http://24.250.182.57:${sessionData.port}`;
+              window.open(launchUrl, "_blank");
+            } else {
+              console.error("No port in session data:", sessionData);
+            }
+          } else {
+            const errorData = await res.json();
+            output.textContent = "Error retrieving session: " + JSON.stringify(errorData);
+          }
+        } catch (err) {
+          output.textContent = "Error: " + err.message;
+        }
+      }
+    
+      async function deleteSession() {
+        try {
+          const res = await fetch("/delete_session", {
+            method: "DELETE",
+            credentials: "include",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ user: currentUser })
+          });
+    
+          if (res.ok) {
+            output.textContent = "Session deleted.";
+            toggleButtons(false);
+          } else {
+            const errorData = await res.json();
+            output.textContent = "Error deleting session: " + JSON.stringify(errorData);
+          }
+        } catch (err) {
+          output.textContent = "Error: " + err.message;
+        }
+      }
+    
+      function toggleButtons(sessionActive) {
+        if (sessionActive) {
+          launchBtn.style.display = "none";
+          getBtn.style.display = "inline-block";
+          delBtn.style.display = "inline-block";
+        } else {
+          launchBtn.style.display = "inline-block";
+          getBtn.style.display = "none";
+          delBtn.style.display = "none";
+        }
+      }
+    
+      launchBtn.addEventListener("click", startSessionAndRedirect);
+      getBtn.addEventListener("click", getSession);
+      delBtn.addEventListener("click", deleteSession);
+    
+      window.addEventListener("DOMContentLoaded", async () => {
+        try {
+          const res = await fetch("/get_session", {
+            method: "POST",  // <-- changed to POST since you expect JSON body
+            credentials: "include",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ user: currentUser })
+          });
+    
+          if (res.ok) {
+            const data = await res.json();
+            if (data && Object.keys(data).length > 0) {
+              toggleButtons(true);
+            }
+          }
+        } catch (err) {
+          console.error("Error checking session status:", err.message);
+        }
+      });
+    </script>
+    
+  </body>
+</html>
