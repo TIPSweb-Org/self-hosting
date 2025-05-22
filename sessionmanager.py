@@ -5,6 +5,7 @@ import re
 import hashlib
 from datetime import datetime
 import secrets
+import atexit
 
 # Session Management
 class Session:
@@ -121,3 +122,20 @@ class SessionManager:
 
         return True
     
+    def cleanup_all_sessions(self):
+        print("cleaning up")
+        for user_id, session in list(self.sessions.items()):
+            try:
+                c = self.docker.containers.get(session.docker_id)
+                print("Found Docker")
+                c.stop()
+                print("sTopped docker")
+                c.remove()
+                print("removed docker")
+            except docker.errors.NotFound:
+                pass
+            if session.stream_id in self.stream_ids:
+                del self.stream_ids[session.stream_id]
+            del self.sessions[user_id]
+        return True
+        

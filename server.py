@@ -1,6 +1,7 @@
 import os
+import atexit
 from functools import wraps
-from flask import Flask, render_template, redirect, url_for, request, flash, session, jsonify, request, Response, stream_with_context
+from flask import Flask, render_template, redirect, url_for, request, flash, session, jsonify, request, Response, stream_with_context, abort
 from flask_login import (
     LoginManager,
     UserMixin,
@@ -156,16 +157,7 @@ def start_session():
     except Exception as e:
         return jsonify({"error": str(e)}), 400
 
-@app.route("/stream/<stream_id>", methods=["GET"])
-def stream(stream_id):
-    session = session_manager.get_session_by_stream_id(stream_id)
-    if not session:
-        abort(404)
-    
-    # Here you would implement your WebRTC streaming logic
-    # For now, we'll just return the session info
-    return _proxy_request(session, "")
-
+@app.route("/stream/<stream_id>", defaults={'subpath': ''}, methods=["GET", "POST", "PUT", "DELETE"])
 @app.route("/stream/<stream_id>/<path:subpath>", methods=["GET", "POST", "PUT", "DELETE"])
 def stream_proxy(stream_id, subpath):
     session = session_manager.get_session_by_stream_id(stream_id)
@@ -173,6 +165,60 @@ def stream_proxy(stream_id, subpath):
         abort(404)
     
     return _proxy_request(session, subpath)
+
+def _proxy_request(session, subpath):
+    """Helper function to proxy requests to the container"""
+    container_url = f"http://24.250.182.57:{session.port}/{subpath}"
+    headers = {key: value for (key, value) in request.headers if key.lower() != 'host'}
+    
+    # Remove encoding headers if present to get raw response
+    headers.pop('Accept-Encoding', None)
+
+    try:
+        if request.method == 'GET':
+            resp = requests.get(
+                container_url,
+                headers=headers,
+                params=request.args,
+                stream=True
+            )
+        elif request.method == 'POST':
+            resp = requests.post(
+                container_url,
+                headers=headers,
+                data=request.get_data(),
+                cookies=request.cookies,
+                stream=True
+            )
+        elif request.method == 'PUT':
+            resp = requests.put(
+                container_url,
+                headers=headers,
+                data=request.get_data(),
+                stream=True
+            )
+        elif request.method == 'DELETE':
+            resp = requests.delete(
+                container_url,
+                headers=headers,
+                stream=True
+            )
+        else:
+            abort(405)
+            
+        # Exclude certain headers from being forwarded
+        excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
+        response_headers = [(name, value) for (name, value) in resp.raw.headers.items()
+                          if name.lower() not in excluded_headers]
+        
+        return Response(
+            resp.iter_content(chunk_size=8192),
+            status=resp.status_code,
+            headers=response_headers
+        )
+    except requests.exceptions.RequestException as e:
+        app.logger.error(f"Proxy error: {str(e)}")
+        abort(502, description="Bad Gateway to container")
 
 
 @app.route("/get_session", methods=["POST"])
@@ -194,56 +240,6 @@ def delete_session_route():
     if success:
         return jsonify({"status": "Session deleted"})
     return jsonify({"error": "No session to delete"}), 404
-
-def _proxy_request(session, subpath):
-    """Helper function to proxy requests to the container"""
-    container_url = f"http://localhost:{session.port}/{subpath}"
-    headers = {key: value for (key, value) in request.headers if key != 'Host'}
-
-    try:
-        if request.method == 'GET':
-            resp = requests.get(
-                container_url,
-                headers=headers,
-                params=request.args,
-                stream=True
-            )
-        elif request.method == 'POST':
-            resp = requests.post(
-                container_url,
-                headers=headers,
-                data=request.get_data(),
-                stream=True
-            )
-        elif request.method == 'PUT':
-            resp = requests.put(
-                container_url,
-                headers=headers,
-                data=request.get_data(),
-                stream=True
-            )
-        elif request.method == 'DELETE':
-            resp = requests.delete(
-                container_url,
-                headers=headers,
-                stream=True
-            )
-        else:
-            abort(405)
-            
-        # Stream the response back to the client
-        def generate():
-            for chunk in resp.iter_content(chunk_size=8192):
-                yield chunk
-                
-        return Response(
-            stream_with_context(generate()),
-            status=resp.status_code,
-            headers=dict(resp.headers) 
-        )
-    except requests.exceptions.RequestException as e:
-        app.logger.error(f"Proxy error: {str(e)}")
-        abort(502, description="Bad Gateway to container")
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 3000))
