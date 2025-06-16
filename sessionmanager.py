@@ -127,11 +127,11 @@ class SessionManager:
         for user_id, session in list(self.sessions.items()):
             try:
                 c = self.docker.containers.get(session.docker_id)
-                print("Found Docker")
+                print("Found Docker Container: " + c.name)
                 c.stop()
-                print("sTopped docker")
+                print("Stopped Docker Container: " + c.name)
                 c.remove()
-                print("removed docker")
+                print("Removed Docker Container: "  + c.name)
             except docker.errors.NotFound:
                 pass
             if session.stream_id in self.stream_ids:

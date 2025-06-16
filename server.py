@@ -1,5 +1,6 @@
 import os
-import atexit
+from multiprocessing import Process
+
 from functools import wraps
 from flask import Flask, render_template, redirect, url_for, request, flash, session, jsonify, request, Response, stream_with_context, abort
 from flask_login import (
@@ -136,6 +137,12 @@ def register():
 
     return render_template('register.html')
 
+  
+@app.route('/shutdown', methods=['GET'])
+@admin_required
+def shutdown():
+    shutdown_server()
+    return 'Server shutting down...'
     
 @app.route('/home')
 @login_required
@@ -147,6 +154,15 @@ def home():
 max_sessions = 5
 session_manager = SessionManager(max_sessions)
 
+
+def shutdown_server():
+    session_manager.cleanup_all_sessions()
+    func = request.environ.get('werkzeug.server.shutdown')
+    server.terminate()
+    server.join()
+    if func is None:
+        raise RuntimeError('Not running with the Werkzeug Server')
+    func()
 
 @app.route("/start_session", methods=["POST"])
 @login_required
@@ -168,7 +184,7 @@ def stream_proxy(stream_id, subpath):
 
 def _proxy_request(session, subpath):
     """Helper function to proxy requests to the container"""
-    container_url = f"http://24.250.182.57:{session.port}/{subpath}"
+    container_url = f"http://127.0.0.1:{session.port}/{subpath}"
     headers = {key: value for (key, value) in request.headers if key.lower() != 'host'}
     
     # Remove encoding headers if present to get raw response
@@ -241,6 +257,7 @@ def delete_session_route():
         return jsonify({"status": "Session deleted"})
     return jsonify({"error": "No session to delete"}), 404
 
-if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 3000))
-    app.run(host='0.0.0.0', port=port, debug=True)
+
+port = int(os.environ.get('PORT', 3000))
+server = Process(target=app.run(host='0.0.0.0', port=port, debug=True))
+server.start()
